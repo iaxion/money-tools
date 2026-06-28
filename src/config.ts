@@ -11,6 +11,7 @@
  *  - PUBLIC_ADSENSE_CLIENT Google AdSense パブリッシャーID（ca-pub-...）
  *  - PUBLIC_SITE_NAME      サイト名（任意）
  *  - PUBLIC_SITE_AUTHOR    運営者名（任意）
+ *  - PUBLIC_GSC_VERIFICATION  Google Search Console のメタタグ認証コード（任意）
  *
  * ※ PUBLIC_ 接頭辞は Astro が環境変数を読み込むための規約。これらの値は最終的に
  *    静的HTMLに出力される（=公開される）前提のものだけを入れること。秘密鍵等は入れない。
@@ -28,16 +29,19 @@ export interface SiteConfig {
   author: string;
   contactEmail: string;
   adsenseClient: string;
+  /** Google Search Console のメタタグ認証コード（content の値のみ） */
+  gscVerification: string;
 }
 
 export const SITE: SiteConfig = {
   name: env.PUBLIC_SITE_NAME || 'お金の計算ツール',
   description:
     '給与の手取り、税金、社会保険料などを無料で素早く計算できるツール集。2025年(令和7年)の最新税制に対応。',
-  // 公開URL。環境変数が無ければ既定の公開URLを使う（公開URLは秘密情報ではない）。
-  url: stripTrailingSlash(env.PUBLIC_SITE_URL || 'https://money-tools.iaxion.dev'),
+  // 公開URLはビルド変数から注入。未設定時は開発用 localhost にフォールバック（実URLは持たない）。
+  url: stripTrailingSlash(env.PUBLIC_SITE_URL || 'http://localhost:4321'),
   lang: 'ja',
   author: env.PUBLIC_SITE_AUTHOR || '運営者',
   contactEmail: env.PUBLIC_CONTACT_EMAIL || '',
   adsenseClient: env.PUBLIC_ADSENSE_CLIENT || '',
+  gscVerification: env.PUBLIC_GSC_VERIFICATION || '',
 };

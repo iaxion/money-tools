@@ -29,6 +29,10 @@ const fullTitle = path === '' ? title : `${title} | ${SITE.name}`;
     <link rel="canonical" href={canonical} />
     <meta name="generator" content={Astro.generator} />
 
+    {SITE.gscVerification && (
+      <meta name="google-site-verification" content={SITE.gscVerification} />
+    )}
+
     <!-- OGP -->
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content={SITE.name} />
