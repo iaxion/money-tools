@@ -1,0 +1,59 @@
+name: Deploy check
+
+# main にマージ/プッシュされた後、Cloudflare Pages の本番デプロイが
+# 「その commit を実際に配信しているか」を確認する。
+# /version.json が返す SHA が github.sha と一致するまでポーリングし、
+# 一定時間内に反映されなければ失敗扱い（＝デプロイ失敗・停滞を検知）。
+#
+# これが無いと CI(ビルド)は緑でも本番デプロイの失敗に誰も気づけない。
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+# 公開URL（独自ドメイン）。変わったらここを更新。
+env:
+  SITE_URL: https://money-tools.iaxion.dev
+
+jobs:
+  verify-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 本番が最新コミットを配信するまで待つ
+        env:
+          SHA: ${{ github.sha }}
+        run: |
+          set -u
+          echo "期待 SHA: $SHA"
+          echo "確認先: $SITE_URL/version.json"
+          for i in $(seq 1 30); do
+            sleep 20
+            live=$(curl -fsS "$SITE_URL/version.json?t=$RANDOM" 2>/dev/null \
+                    | grep -oE '"sha"[ ]*:[ ]*"[^"]*"' | grep -oE '[A-Za-z0-9]+' | tail -1 || true)
+            echo "  [$i] live sha = ${live:-(取得失敗)}"
+            if [ "$live" = "$SHA" ]; then
+              echo "✅ 本番デプロイ確認: $SHA を配信中"
+              # 主要ページが 200 を返すかも確認
+              for p in "/" "/tools/tedori/" "/tools/nisa/" "/sitemap-index.xml"; do
+                code=$(curl -s -o /dev/null -w '%{http_code}' "$SITE_URL$p")
+                echo "    $p -> $code"
+                [ "$code" = "200" ] || { echo "❌ $p が $code"; exit 1; }
+              done
+              echo "✅ 主要ページも 200 OK"
+              exit 0
+            fi
+          done
+          echo "❌ 10分以内に本番へ反映されませんでした（デプロイ失敗/停滞の疑い）"
+          exit 1
+
+      - name: Slack 通知（失敗時のみ）
+        if: failure()
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          ./scripts/notify-slack.sh "⚠️ money-tools: 本番デプロイ確認に失敗。commit ${GITHUB_SHA:0:8} が ${SITE_URL} に反映されていません。Cloudflare Pages のデプロイログを確認してください。"
