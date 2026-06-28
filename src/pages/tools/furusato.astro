@@ -1,5 +1,6 @@
 ---
 import Base from '../../layouts/Base.astro';
+import Freshness from '../../components/Freshness.astro';
 import { SITE } from '../../config.ts';
 
 const path = '/tools/furusato';
@@ -100,6 +101,7 @@ const jsonLd = [
       住宅ローン控除・医療費控除・iDeCo 等がある場合や、自治体・他の所得がある場合は上限が変わります。
       上限ギリギリを狙わず、少し余裕をもった金額がおすすめです。
     </div>
+    <Freshness />
   </div>
 
   <section class="prose">

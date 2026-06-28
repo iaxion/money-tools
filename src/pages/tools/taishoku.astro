@@ -1,5 +1,6 @@
 ---
 import Base from '../../layouts/Base.astro';
+import Freshness from '../../components/Freshness.astro';
 import { SITE } from '../../config.ts';
 
 const path = '/tools/taishoku';
@@ -90,6 +91,7 @@ const jsonLd = [
       <strong>ご注意：</strong>「退職所得の受給に関する申告書」を提出した一般的なケースの概算です。
       勤続5年以下の役員等・短期退職手当等の特例は考慮していません。実際の金額は勤務先・税務署にご確認ください。
     </div>
+    <Freshness />
   </div>
 
   <section class="prose">

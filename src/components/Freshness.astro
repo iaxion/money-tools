@@ -1,0 +1,22 @@
+---
+/**
+ * 制度データの鮮度表示。最終確認日を出し、見直し期限を過ぎていれば警告する。
+ * 税制に依存するツール（手取り・ふるさと納税・退職金など）の注意書き付近に置く。
+ */
+import { TAX_DATA_META, isTaxDataStale } from '../lib/freshness.ts';
+
+const stale = isTaxDataStale();
+if (stale) {
+  // ビルド時ログ（定期レビューや開発者が気づくため）
+  console.warn(
+    `[freshness] 税制データの見直し期限(${TAX_DATA_META.reviewDue})を過ぎています。最新の改正を確認してください。`,
+  );
+}
+---
+
+<p class={`freshness${stale ? ' is-stale' : ''}`}>
+  📅 対象制度：<strong>{TAX_DATA_META.fiscalYear}</strong>分（最終確認 {TAX_DATA_META.lastReviewed}）
+  {stale && (
+    <span class="freshness-warn">／ ⚠ 最新の改正を確認中です。最新の制度と異なる場合があります。</span>
+  )}
+</p>

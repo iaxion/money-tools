@@ -1,5 +1,6 @@
 ---
 import Base from '../../layouts/Base.astro';
+import Freshness from '../../components/Freshness.astro';
 import { SITE } from '../../config.ts';
 
 const path = '/tools/tedori';
@@ -110,6 +111,7 @@ const jsonLd = [
       社会保険料は協会けんぽ東京支部の2026年度料率（健康保険9.85%＋子ども・子育て支援金0.23%、介護1.62%、雇用0.5%）を用い、年収に直接料率を適用した簡略計算です（本来は標準報酬月額の等級表で決まります）。
       住民税は所得割10%＋均等割5,000円で計算し、調整控除や自治体差は考慮していません。実際の給与明細とは差が出る場合があります。
     </div>
+    <Freshness />
   </div>
 
   <section class="prose">
