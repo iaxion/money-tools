@@ -1,0 +1,147 @@
+---
+import Base from '../../layouts/Base.astro';
+import { SITE } from '../../config.ts';
+
+const path = '/tools/taishoku';
+const title = '退職金の手取り計算（退職所得控除・税金）';
+const description =
+  '退職金の額と勤続年数を入れるだけで、退職所得控除・所得税・住民税を差し引いた手取り額を概算。2025年税制対応の無料シミュレーター。';
+
+const faqs = [
+  {
+    q: '退職金に税金はどれくらいかかりますか？',
+    a: '退職金は「退職所得」として優遇され、勤続年数に応じた退職所得控除を差し引き、さらに残額の1/2のみが課税対象になります。社会保険料はかかりません。多くのケースで税負担は給与よりかなり軽くなります。',
+  },
+  {
+    q: '退職所得控除はいくらですか？',
+    a: '勤続20年以下は「40万円×勤続年数（最低80万円）」、20年超は「800万円＋70万円×（勤続年数−20年）」です。例えば勤続38年なら控除は2,060万円になります。',
+  },
+  {
+    q: '勤続38年で退職金2,000万円なら手取りは？',
+    a: '退職所得控除2,060万円が退職金2,000万円を上回るため、課税対象は0となり、所得税・住民税はかからず手取りは全額の2,000万円になります（一般的なケースの概算）。',
+  },
+  {
+    q: '計算されない特例はありますか？',
+    a: '勤続5年以下の法人役員等や短期退職手当等では1/2課税が適用されない特例があります。本ツールはこれらの特例を考慮しない一般的なケースの概算です。',
+  },
+];
+
+const jsonLd = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'ホーム', item: SITE.url + '/' },
+      { '@type': 'ListItem', position: 2, name: '退職金の手取り計算', item: SITE.url + path + '/' },
+    ],
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: faqs.map((f) => ({
+      '@type': 'Question',
+      name: f.q,
+      acceptedAnswer: { '@type': 'Answer', text: f.a },
+    })),
+  },
+];
+---
+
+<Base title={title} description={description} path={path} jsonLd={jsonLd}>
+  <section class="hero" style="padding-bottom:6px;">
+    <h1>退職金の手取り計算</h1>
+    <p>退職金の額と勤続年数から、退職所得控除・所得税・住民税を引いた手取りを概算します。</p>
+  </section>
+
+  <div class="panel">
+    <form id="calc" autocomplete="off">
+      <div class="row">
+        <div class="field">
+          <label for="amount">退職金の額<span class="hint"> ／ 円</span></label>
+          <input type="number" id="amount" inputmode="numeric" min="0" step="100000" value="20000000" />
+        </div>
+        <div class="field">
+          <label for="years">勤続年数<span class="hint"> ／ 年</span></label>
+          <input type="number" id="years" inputmode="numeric" min="1" max="50" step="1" value="30" />
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <div id="result" class="panel" aria-live="polite">
+    <div class="result-hero">
+      <p class="label">退職金の手取り（概算）</p>
+      <p class="big" id="r-takehome">—</p>
+      <p class="sub">税金の合計 <strong id="r-tax">—</strong></p>
+    </div>
+
+    <table class="breakdown">
+      <tbody>
+        <tr><td>退職金（額面）</td><td class="num" id="r-amount">—</td></tr>
+        <tr><td class="muted">退職所得控除</td><td class="num" id="r-deduction">—</td></tr>
+        <tr><td class="muted">課税退職所得（1/2後）</td><td class="num" id="r-taxable">—</td></tr>
+        <tr><td class="muted">　所得税（復興税込み）</td><td class="num" id="r-incometax">—</td></tr>
+        <tr><td class="muted">　住民税</td><td class="num" id="r-residenttax">—</td></tr>
+        <tr class="total"><td>手取り</td><td class="num" id="r-takehome2">—</td></tr>
+      </tbody>
+    </table>
+
+    <div class="note">
+      <strong>ご注意：</strong>「退職所得の受給に関する申告書」を提出した一般的なケースの概算です。
+      勤続5年以下の役員等・短期退職手当等の特例は考慮していません。実際の金額は勤務先・税務署にご確認ください。
+    </div>
+  </div>
+
+  <section class="prose">
+    <h2>退職金の税金が軽い理由</h2>
+    <p>
+      退職金は長年の勤労に対する報償的な性格があるため、税制上とても優遇されています。ポイントは2つ。
+      まず<strong>退職所得控除</strong>で大きな金額を差し引き、さらに残った額の<strong>1/2だけ</strong>を課税対象とします。
+      しかも他の所得と分けて計算（分離課税）され、社会保険料もかかりません。
+    </p>
+    <h3>退職所得控除の早見</h3>
+    <ul>
+      <li>勤続20年以下：<strong>40万円 × 勤続年数</strong>（最低80万円）</li>
+      <li>勤続20年超：<strong>800万円 ＋ 70万円 ×（勤続年数 − 20年）</strong></li>
+      <li>例）勤続30年 → 1,500万円、勤続38年 → 2,060万円</li>
+    </ul>
+
+    <h2>よくある質問</h2>
+    {faqs.map((f) => (
+      <details>
+        <summary>{f.q}</summary>
+        <p>{f.a}</p>
+      </details>
+    ))}
+  </section>
+
+  <p style="margin-top:24px;"><a href="/">← ほかの計算ツールを見る</a></p>
+</Base>
+
+<script>
+  import { calcTaishoku } from '../../lib/taishoku.ts';
+  import { yen } from '../../lib/tax.ts';
+
+  const $ = (id: string) => document.getElementById(id) as HTMLElement;
+  const amount = $('amount') as HTMLInputElement;
+  const years = $('years') as HTMLInputElement;
+
+  function render() {
+    const a = Number(amount.value) || 0;
+    const r = calcTaishoku({ amount: a, yearsOfService: Number(years.value) || 0 });
+    $('r-takehome').textContent = yen(r.takeHome);
+    $('r-takehome2').textContent = yen(r.takeHome);
+    $('r-tax').textContent = yen(r.incomeTax + r.residentTax);
+    $('r-amount').textContent = yen(a);
+    $('r-deduction').textContent = yen(r.deduction);
+    $('r-taxable').textContent = yen(r.taxableRetirementIncome);
+    $('r-incometax').textContent = yen(r.incomeTax);
+    $('r-residenttax').textContent = yen(r.residentTax);
+  }
+
+  for (const el of [amount, years]) {
+    el.addEventListener('input', render);
+    el.addEventListener('change', render);
+  }
+  render();
+</script>

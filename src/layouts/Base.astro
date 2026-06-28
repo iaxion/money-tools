@@ -1,0 +1,89 @@
+---
+import '../styles/global.css';
+import { SITE } from '../config.ts';
+
+export interface Props {
+  title: string;
+  description?: string;
+  /** 例: "/tools/tedori"。canonical と OGP url に使用 */
+  path?: string;
+  /** ページ固有の JSON-LD(構造化データ)。任意 */
+  jsonLd?: Record<string, unknown> | Record<string, unknown>[];
+}
+
+const { title, description = SITE.description, path = '', jsonLd } = Astro.props;
+const normalizedPath = path === '' ? '/' : path.endsWith('/') ? path : path + '/';
+const canonical = SITE.url + normalizedPath;
+const fullTitle = path === '' ? title : `${title} | ${SITE.name}`;
+---
+
+<!doctype html>
+<html lang={SITE.lang}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" href="/favicon.ico" />
+    <title>{fullTitle}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    <meta name="generator" content={Astro.generator} />
+
+    <!-- OGP -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content={SITE.name} />
+    <meta property="og:title" content={fullTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:locale" content="ja_JP" />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    {jsonLd && (
+      <script
+        type="application/ld+json"
+        set:html={JSON.stringify(jsonLd)}
+      />
+    )}
+
+    {SITE.adsenseClient && (
+      <script
+        async
+        src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${SITE.adsenseClient}`}
+        crossorigin="anonymous"
+      ></script>
+    )}
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container">
+        <a class="brand" href="/">
+          <span class="mark">¥</span>{SITE.name}
+        </a>
+        <nav class="nav">
+          <a href="/">ツール一覧</a>
+          <a href="/about/">運営者</a>
+        </nav>
+      </div>
+    </header>
+
+    <div class="container">
+      <main>
+        <slot />
+      </main>
+    </div>
+
+    <footer class="site-footer">
+      <div class="container">
+        <nav>
+          <a href="/">ツール一覧</a>
+          <a href="/about/">運営者情報</a>
+          <a href="/privacy/">プライバシーポリシー</a>
+          <a href="/contact/">お問い合わせ</a>
+        </nav>
+        <p style="margin:.6em 0 0;">
+          © {new Date().getFullYear()} {SITE.name}　本サイトの計算結果は概算です。実際の税額・保険料を保証するものではありません。
+        </p>
+      </div>
+    </footer>
+  </body>
+</html>

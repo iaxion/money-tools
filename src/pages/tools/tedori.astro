@@ -1,0 +1,186 @@
+---
+import Base from '../../layouts/Base.astro';
+import { SITE } from '../../config.ts';
+
+const path = '/tools/tedori';
+const title = '給与の手取り計算（2025年・令和7年対応）';
+const description =
+  '額面年収を入力するだけで、手取り（年収・月収）と所得税・住民税・社会保険料の内訳を概算。2025年(令和7年)の税制改正に対応した無料シミュレーター。';
+
+const faqs = [
+  {
+    q: '手取りはどうやって計算されますか？',
+    a: '額面の年収から、社会保険料（健康保険・厚生年金・雇用保険、40歳以上は介護保険）と、所得税・住民税を差し引いた金額が手取りです。本ツールは2025年(令和7年)の税率・控除と、協会けんぽ東京支部の2025年度料率を用いて概算します。',
+  },
+  {
+    q: '年収400万円の手取りはいくらですか？',
+    a: '独身・扶養なしの場合、年収400万円の手取りはおおよそ年317万円・月26万円前後です。家族構成や自治体により変わります。実際の金額は本ツールに条件を入力してご確認ください。',
+  },
+  {
+    q: '入力した年収などの情報は保存されますか？',
+    a: 'いいえ。計算はすべてお使いのブラウザ内で完結し、入力内容がサーバーに送信・保存されることはありません。',
+  },
+  {
+    q: '計算結果は正確ですか？',
+    a: '概算です。社会保険料は本来「標準報酬月額」の等級で決まり、住民税の調整控除や自治体差、各種控除も簡略化しています。給与明細や自治体の通知と数千円〜数万円ずれる場合があります。',
+  },
+];
+
+const jsonLd = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'ホーム', item: SITE.url + '/' },
+      { '@type': 'ListItem', position: 2, name: '給与の手取り計算', item: SITE.url + path + '/' },
+    ],
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: faqs.map((f) => ({
+      '@type': 'Question',
+      name: f.q,
+      acceptedAnswer: { '@type': 'Answer', text: f.a },
+    })),
+  },
+];
+---
+
+<Base title={title} description={description} path={path} jsonLd={jsonLd}>
+  <section class="hero" style="padding-bottom:6px;">
+    <h1>給与の手取り計算</h1>
+    <p>額面年収を入れるだけで、手取り（年・月）と税金・社会保険料の内訳を概算します。2025年(令和7年)税制対応。</p>
+  </section>
+
+  <div class="panel">
+    <form id="calc" autocomplete="off">
+      <div class="field">
+        <label for="income">額面年収（賞与込みの総支給額）<span class="hint"> ／ 円</span></label>
+        <input type="number" id="income" inputmode="numeric" min="0" step="100000" value="4000000" />
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label for="age">年齢区分<span class="hint"> ／ 介護保険</span></label>
+          <select id="age">
+            <option value="0" selected>40歳未満</option>
+            <option value="1">40〜64歳（介護保険あり）</option>
+            <option value="0b">65歳以上</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="dependents">扶養親族（16歳以上）<span class="hint"> ／ 人</span></label>
+          <input type="number" id="dependents" inputmode="numeric" min="0" max="10" step="1" value="0" />
+        </div>
+      </div>
+
+      <div class="field">
+        <div class="checks">
+          <label><input type="checkbox" id="spouse" /> 配偶者控除の対象となる配偶者がいる</label>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <div id="result" class="panel" aria-live="polite">
+    <div class="result-hero">
+      <p class="label">手取り年収（概算）</p>
+      <p class="big" id="r-annual">—</p>
+      <p class="sub">月あたり <strong id="r-monthly">—</strong>　／　手取り率 <strong id="r-rate">—</strong></p>
+    </div>
+
+    <table class="breakdown">
+      <tbody>
+        <tr><td>額面年収</td><td class="num" id="r-gross">—</td></tr>
+        <tr><td class="sect" colspan="2">社会保険料（本人負担）</td></tr>
+        <tr><td class="muted">　健康保険<span id="r-care-label"></span></td><td class="num" id="r-health">—</td></tr>
+        <tr><td class="muted">　厚生年金</td><td class="num" id="r-pension">—</td></tr>
+        <tr><td class="muted">　雇用保険</td><td class="num" id="r-employment">—</td></tr>
+        <tr><td class="sect" colspan="2">税金</td></tr>
+        <tr><td class="muted">　所得税（復興税込み）</td><td class="num" id="r-incometax">—</td></tr>
+        <tr><td class="muted">　住民税</td><td class="num" id="r-residenttax">—</td></tr>
+        <tr><td>控除合計</td><td class="num" id="r-deductions">—</td></tr>
+        <tr class="total"><td>手取り年収</td><td class="num" id="r-takehome">—</td></tr>
+      </tbody>
+    </table>
+
+    <div class="note">
+      <strong>概算についての注意：</strong>
+      社会保険料は協会けんぽ東京支部の2025年度料率を用い、年収に直接料率を適用した簡略計算です（本来は標準報酬月額の等級表で決まります）。
+      住民税は所得割10%＋均等割5,000円で計算し、調整控除や自治体差は考慮していません。実際の給与明細とは差が出る場合があります。
+    </div>
+  </div>
+
+  <section class="prose">
+    <h2>手取りとは？額面との違い</h2>
+    <p>
+      「額面（がくめん）」は会社が支払う総支給額、「手取り」はそこから<strong>社会保険料</strong>と<strong>税金</strong>が差し引かれ、実際に銀行口座へ振り込まれる金額です。
+      一般に手取りは額面の<strong>およそ75〜85%</strong>になり、年収が上がるほど税率が高くなるため手取り率は下がっていきます。
+    </p>
+
+    <h3>差し引かれるもの</h3>
+    <ul>
+      <li><strong>健康保険料</strong>：病気・けがの医療費に備える保険。40歳以上は介護保険料も上乗せされます。</li>
+      <li><strong>厚生年金保険料</strong>：将来の年金の原資。料率は18.3%（労使折半で本人は9.15%）。</li>
+      <li><strong>雇用保険料</strong>：失業時などの給付に備える保険。</li>
+      <li><strong>所得税</strong>：その年の所得にかかる国の税金。累進課税で5〜45%。</li>
+      <li><strong>住民税</strong>：お住まいの自治体に納める税金。所得割は一律約10%。</li>
+    </ul>
+
+    <h3>2025年(令和7年)の税制改正で手取りはどう変わった？</h3>
+    <p>
+      2025年分から<strong>基礎控除</strong>が48万円→58万円（所得に応じてさらに上乗せ）に、<strong>給与所得控除</strong>の最低額が55万円→65万円に引き上げられました。
+      これにより、特に低〜中所得の方は課税対象が減り、手取りが増える方向に働きます。本ツールはこの改正を反映しています。
+    </p>
+
+    <h2>よくある質問</h2>
+    {faqs.map((f) => (
+      <details>
+        <summary>{f.q}</summary>
+        <p>{f.a}</p>
+      </details>
+    ))}
+  </section>
+
+  <p style="margin-top:24px;"><a href="/">← ほかの計算ツールを見る</a></p>
+</Base>
+
+<script>
+  import { calcTedori, yen } from '../../lib/tax.ts';
+
+  const $ = (id: string) => document.getElementById(id) as HTMLElement;
+  const income = $('income') as HTMLInputElement;
+  const age = $('age') as HTMLSelectElement;
+  const dependents = $('dependents') as HTMLInputElement;
+  const spouse = $('spouse') as HTMLInputElement;
+
+  function render() {
+    const r = calcTedori({
+      annualIncome: Number(income.value) || 0,
+      age40OrOver: age.value === '1',
+      hasSpouse: spouse.checked,
+      dependents: Number(dependents.value) || 0,
+    });
+
+    $('r-annual').textContent = yen(r.takeHomeAnnual);
+    $('r-monthly').textContent = yen(r.takeHomeMonthly);
+    $('r-rate').textContent = (r.takeHomeRate * 100).toFixed(1) + '%';
+
+    $('r-gross').textContent = yen(r.annualIncome);
+    $('r-health').textContent = yen(r.healthInsurance);
+    $('r-care-label').textContent = age.value === '1' ? '（介護込み）' : '';
+    $('r-pension').textContent = yen(r.pension);
+    $('r-employment').textContent = yen(r.employmentInsurance);
+    $('r-incometax').textContent = yen(r.incomeTax);
+    $('r-residenttax').textContent = yen(r.residentTax);
+    $('r-deductions').textContent = yen(r.totalDeductions);
+    $('r-takehome').textContent = yen(r.takeHomeAnnual);
+  }
+
+  for (const el of [income, age, dependents, spouse]) {
+    el.addEventListener('input', render);
+    el.addEventListener('change', render);
+  }
+  render();
+</script>

@@ -1,0 +1,174 @@
+---
+import Base from '../../layouts/Base.astro';
+import { SITE } from '../../config.ts';
+
+const path = '/tools/nisa';
+const title = '積立NISA・投資シミュレーター（複利計算）';
+const description =
+  '毎月の積立額・想定利回り・年数を入れるだけで、将来の資産額と運用益を複利で試算。NISAの非課税メリット（節税額）も表示する無料シミュレーター。';
+
+const faqs = [
+  {
+    q: '積立NISAはいくら増えますか？',
+    a: '利回りと年数で大きく変わります。例えば毎月3万円を想定利回り5%で20年間積み立てると、元本720万円に対し評価額はおよそ1,233万円（運用益約513万円）になります。実際の運用成績は市況により変動します。',
+  },
+  {
+    q: 'NISAだと税金はどれくらい得ですか？',
+    a: '通常の課税口座では運用益に約20.315%の税金がかかります。NISA口座ならこれが非課税です。本ツールは「課税口座だった場合の税額」も表示するので、非課税メリットの目安が分かります。',
+  },
+  {
+    q: '新しいNISAのつみたて投資枠の上限は？',
+    a: 'つみたて投資枠は年間120万円（月10万円）まで、成長投資枠と合わせて生涯1,800万円までが非課税の対象です（2024年開始の新NISA）。本ツールは枠を超える金額も試算できますが、超過分は非課税になりません。',
+  },
+  {
+    q: '計算は正確ですか？',
+    a: '毎月末に一定額を積み立て、一定の年利回りで複利運用したと仮定した概算です。実際は価格変動・手数料・分配金などにより結果は変わります。投資は元本割れのリスクがあります。',
+  },
+];
+
+const jsonLd = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'ホーム', item: SITE.url + '/' },
+      { '@type': 'ListItem', position: 2, name: '積立NISA・投資シミュレーター', item: SITE.url + path + '/' },
+    ],
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: faqs.map((f) => ({
+      '@type': 'Question',
+      name: f.q,
+      acceptedAnswer: { '@type': 'Answer', text: f.a },
+    })),
+  },
+];
+---
+
+<Base title={title} description={description} path={path} jsonLd={jsonLd}>
+  <section class="hero" style="padding-bottom:6px;">
+    <h1>積立NISA・投資シミュレーター</h1>
+    <p>毎月いくらを、何％で、何年積み立てる？　将来の資産額と運用益を複利で試算します。NISAの非課税メリットも表示。</p>
+  </section>
+
+  <div class="panel">
+    <form id="calc" autocomplete="off">
+      <div class="field">
+        <label for="monthly">毎月の積立額<span class="hint"> ／ 円</span></label>
+        <input type="number" id="monthly" inputmode="numeric" min="0" step="1000" value="30000" />
+      </div>
+      <div class="row">
+        <div class="field">
+          <label for="rate">想定年利回り<span class="hint"> ／ ％</span></label>
+          <input type="number" id="rate" inputmode="decimal" min="0" max="20" step="0.1" value="5" />
+        </div>
+        <div class="field">
+          <label for="years">積立年数<span class="hint"> ／ 年</span></label>
+          <input type="number" id="years" inputmode="numeric" min="1" max="50" step="1" value="20" />
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <div id="result" class="panel" aria-live="polite">
+    <div class="result-hero">
+      <p class="label">運用後の資産額（概算）</p>
+      <p class="big" id="r-value">—</p>
+      <p class="sub">元本 <strong id="r-principal">—</strong>　＋　運用益 <strong id="r-profit">—</strong></p>
+    </div>
+
+    <table class="breakdown">
+      <tbody>
+        <tr><td>積立元本の合計</td><td class="num" id="r-principal2">—</td></tr>
+        <tr><td>運用益</td><td class="num" id="r-profit2">—</td></tr>
+        <tr class="total"><td>評価額</td><td class="num" id="r-value2">—</td></tr>
+        <tr><td class="muted">参考：課税口座なら税金（約20.315%）</td><td class="num muted" id="r-tax">—</td></tr>
+        <tr><td><strong style="color:var(--brand-strong)">NISAなら上記の税金が非課税</strong></td><td class="num" style="color:var(--brand-strong)" id="r-saved">—</td></tr>
+      </tbody>
+    </table>
+
+    <h3 style="margin:22px 0 8px;font-size:1.05rem;">年ごとの推移</h3>
+    <table class="breakdown">
+      <thead>
+        <tr><th>年数</th><th class="num">元本</th><th class="num">評価額</th></tr>
+      </thead>
+      <tbody id="series"></tbody>
+    </table>
+
+    <div class="note">
+      <strong>ご注意：</strong>毎月末に一定額を積み立て、一定の年利回りで複利運用したと仮定した概算です。
+      実際の運用は価格変動・手数料・分配金等で結果が変わり、<strong>元本割れの可能性</strong>があります。投資はご自身の判断と責任で行ってください。
+    </div>
+  </div>
+
+  <section class="prose">
+    <h2>複利の力（長く続けるほど増える理由）</h2>
+    <p>
+      積立投資の最大の武器は<strong>複利</strong>です。運用で得た利益がさらに利益を生むため、期間が長いほど雪だるま式に資産が伸びます。
+      たとえば毎月3万円を年利5%で積み立てると、元本は10年で360万円・20年で720万円ですが、評価額は10年で約466万円、20年では約1,233万円に。
+      <strong>後半ほど運用益の伸びが大きくなる</strong>のが複利の特徴です。
+    </p>
+
+    <h2>NISAの非課税メリット</h2>
+    <p>
+      通常、投資の運用益には<strong>約20.315%</strong>の税金がかかります。100万円の利益なら約20万円が税金です。
+      NISA口座を使えばこの税金が<strong>ゼロ</strong>。新NISAでは「つみたて投資枠」が年120万円、生涯で1,800万円まで非課税で投資できます。
+      長期・積立・分散の王道に最も向いた制度です。
+    </p>
+
+    <h2>よくある質問</h2>
+    {faqs.map((f) => (
+      <details>
+        <summary>{f.q}</summary>
+        <p>{f.a}</p>
+      </details>
+    ))}
+  </section>
+
+  <p style="margin-top:24px;"><a href="/">← ほかの計算ツールを見る</a></p>
+</Base>
+
+<script>
+  import { calcInvest, yearlySeries } from '../../lib/invest.ts';
+  import { yen } from '../../lib/tax.ts';
+
+  const $ = (id: string) => document.getElementById(id) as HTMLElement;
+  const monthly = $('monthly') as HTMLInputElement;
+  const rate = $('rate') as HTMLInputElement;
+  const years = $('years') as HTMLInputElement;
+
+  function render() {
+    const input = {
+      monthly: Number(monthly.value) || 0,
+      annualRatePct: Number(rate.value) || 0,
+      years: Number(years.value) || 0,
+    };
+    const r = calcInvest(input);
+
+    $('r-value').textContent = yen(r.futureValue);
+    $('r-principal').textContent = yen(r.principal);
+    $('r-profit').textContent = yen(r.profit);
+    $('r-principal2').textContent = yen(r.principal);
+    $('r-profit2').textContent = yen(r.profit);
+    $('r-value2').textContent = yen(r.futureValue);
+    $('r-tax').textContent = yen(r.taxIfTaxable);
+    $('r-saved').textContent = '+' + yen(r.taxIfTaxable) + ' お得';
+
+    const rows = yearlySeries(input)
+      .filter((s, i, a) => s.year % 5 === 0 || s.year === a.length || s.year === 1)
+      .map(
+        (s) =>
+          `<tr><td>${s.year}年目</td><td class="num muted">${yen(s.principal)}</td><td class="num">${yen(s.value)}</td></tr>`,
+      )
+      .join('');
+    $('series').innerHTML = rows;
+  }
+
+  for (const el of [monthly, rate, years]) {
+    el.addEventListener('input', render);
+    el.addEventListener('change', render);
+  }
+  render();
+</script>

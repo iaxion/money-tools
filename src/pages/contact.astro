@@ -1,0 +1,26 @@
+---
+import Base from '../layouts/Base.astro';
+import { SITE } from '../config.ts';
+---
+
+<Base title="お問い合わせ" path="/contact">
+  <section class="hero" style="padding-bottom:6px;">
+    <h1>お問い合わせ</h1>
+  </section>
+
+  <div class="prose">
+    <p>
+      当サイトに関するご意見・ご指摘（計算結果の誤りのご報告など）・お問い合わせは、以下のメールアドレスまでご連絡ください。
+    </p>
+    {SITE.contactEmail ? (
+      <p style="font-size:1.1rem;">
+        📧 <a href={`mailto:${SITE.contactEmail}`}>{SITE.contactEmail}</a>
+      </p>
+    ) : (
+      <p style="color:var(--ink-soft);">（お問い合わせ先は準備中です）</p>
+    )}
+    <p style="color:var(--ink-soft);font-size:.9rem;">
+      ※ 個別の税務・法務に関するご相談にはお答えできません。具体的な税額・手続きについては、税務署や税理士等の専門家にご確認ください。
+    </p>
+  </div>
+</Base>

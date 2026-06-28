@@ -1,0 +1,156 @@
+---
+import Base from '../../layouts/Base.astro';
+import { SITE } from '../../config.ts';
+
+const path = '/tools/furusato';
+const title = 'ふるさと納税 限度額シミュレーター（2025年）';
+const description =
+  '年収と家族構成を入れるだけで、ふるさと納税の控除上限額（自己負担2,000円で済む目安）を計算。2025年税制対応の無料シミュレーター。';
+
+const faqs = [
+  {
+    q: 'ふるさと納税の限度額とは？',
+    a: '自己負担額2,000円で寄付できる上限のことです。この上限内であれば、寄付額から2,000円を引いた金額が所得税の還付・住民税の控除として戻ってきます。上限を超えた分は自己負担になります。',
+  },
+  {
+    q: '年収500万円だといくらまで？',
+    a: '独身・扶養なしの場合、控除上限の目安はおよそ6万円前後です。配偶者控除や扶養があると上限は下がります。正確な目安は本ツールに条件を入力してご確認ください。',
+  },
+  {
+    q: '住宅ローン控除や医療費控除がある場合は？',
+    a: 'それらの控除があると課税所得が下がり、ふるさと納税の上限額も少なくなります。本ツールはこれらを考慮しない概算のため、該当する方は余裕をもった金額にとどめることをおすすめします。',
+  },
+  {
+    q: 'ワンストップ特例と確定申告で上限は変わりますか？',
+    a: '上限額の計算自体は基本的に同じです。ワンストップ特例（寄付先5自治体以内・確定申告不要）でも、確定申告でも、自己負担2,000円で済む上限の考え方は変わりません。',
+  },
+];
+
+const jsonLd = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'ホーム', item: SITE.url + '/' },
+      { '@type': 'ListItem', position: 2, name: 'ふるさと納税 限度額シミュレーター', item: SITE.url + path + '/' },
+    ],
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: faqs.map((f) => ({
+      '@type': 'Question',
+      name: f.q,
+      acceptedAnswer: { '@type': 'Answer', text: f.a },
+    })),
+  },
+];
+---
+
+<Base title={title} description={description} path={path} jsonLd={jsonLd}>
+  <section class="hero" style="padding-bottom:6px;">
+    <h1>ふるさと納税 限度額シミュレーター</h1>
+    <p>年収と家族構成から、自己負担2,000円で済む「控除上限額」の目安を計算します。2025年(令和7年)税制対応。</p>
+  </section>
+
+  <div class="panel">
+    <form id="calc" autocomplete="off">
+      <div class="field">
+        <label for="income">額面年収<span class="hint"> ／ 円</span></label>
+        <input type="number" id="income" inputmode="numeric" min="0" step="100000" value="5000000" />
+      </div>
+      <div class="row">
+        <div class="field">
+          <label for="age">年齢区分<span class="hint"> ／ 介護保険</span></label>
+          <select id="age">
+            <option value="0" selected>40歳未満</option>
+            <option value="1">40〜64歳（介護保険あり）</option>
+            <option value="0b">65歳以上</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="dependents">扶養親族（16歳以上）<span class="hint"> ／ 人</span></label>
+          <input type="number" id="dependents" inputmode="numeric" min="0" max="10" step="1" value="0" />
+        </div>
+      </div>
+      <div class="field">
+        <div class="checks">
+          <label><input type="checkbox" id="spouse" /> 配偶者控除の対象となる配偶者がいる</label>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <div id="result" class="panel" aria-live="polite">
+    <div class="result-hero">
+      <p class="label">控除上限額の目安（自己負担2,000円）</p>
+      <p class="big" id="r-limit">—</p>
+      <p class="sub">この金額までの寄付なら、実質負担は2,000円です</p>
+    </div>
+
+    <table class="breakdown">
+      <tbody>
+        <tr><td class="muted">参考：住民税の所得割額</td><td class="num" id="r-resident">—</td></tr>
+        <tr><td class="muted">参考：所得税の限界税率</td><td class="num" id="r-rate">—</td></tr>
+      </tbody>
+    </table>
+
+    <div class="note">
+      <strong>ご注意：</strong>給与所得者で、ふるさと納税以外に大きな控除がないケースの<strong>目安</strong>です。
+      住宅ローン控除・医療費控除・iDeCo 等がある場合や、自治体・他の所得がある場合は上限が変わります。
+      上限ギリギリを狙わず、少し余裕をもった金額がおすすめです。
+    </div>
+  </div>
+
+  <section class="prose">
+    <h2>ふるさと納税のしくみ</h2>
+    <p>
+      ふるさと納税は、好きな自治体に寄付すると、<strong>自己負担2,000円を除いた金額</strong>が所得税の還付・住民税の控除として戻ってくる制度です。
+      実質2,000円で各地の返礼品（お米・肉・果物など）が受け取れるため、上限額の範囲で使うほどお得になります。
+    </p>
+    <h3>上限額を超えるとどうなる？</h3>
+    <p>
+      上限を超えて寄付した分は、控除されず<strong>純粋な自己負担</strong>になります。そのため、自分の上限額を正しく把握することが大切です。
+      収入が確定しきっていない年の途中では、見込み年収でやや控えめに見積もると安全です。
+    </p>
+
+    <h2>よくある質問</h2>
+    {faqs.map((f) => (
+      <details>
+        <summary>{f.q}</summary>
+        <p>{f.a}</p>
+      </details>
+    ))}
+  </section>
+
+  <p style="margin-top:24px;"><a href="/">← ほかの計算ツールを見る</a></p>
+</Base>
+
+<script>
+  import { calcFurusato } from '../../lib/furusato.ts';
+  import { yen } from '../../lib/tax.ts';
+
+  const $ = (id: string) => document.getElementById(id) as HTMLElement;
+  const income = $('income') as HTMLInputElement;
+  const age = $('age') as HTMLSelectElement;
+  const dependents = $('dependents') as HTMLInputElement;
+  const spouse = $('spouse') as HTMLInputElement;
+
+  function render() {
+    const f = calcFurusato({
+      annualIncome: Number(income.value) || 0,
+      age40OrOver: age.value === '1',
+      hasSpouse: spouse.checked,
+      dependents: Number(dependents.value) || 0,
+    });
+    $('r-limit').textContent = yen(f.limit);
+    $('r-resident').textContent = yen(f.residentTaxIncomeBased);
+    $('r-rate').textContent = (f.marginalIncomeTaxRate * 100).toFixed(0) + '%';
+  }
+
+  for (const el of [income, age, dependents, spouse]) {
+    el.addEventListener('input', render);
+    el.addEventListener('change', render);
+  }
+  render();
+</script>

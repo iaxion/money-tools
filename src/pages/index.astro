@@ -1,0 +1,101 @@
+---
+import Base from '../layouts/Base.astro';
+import { SITE } from '../config.ts';
+
+const tools = [
+  {
+    href: '/tools/tedori/',
+    tag: '人気',
+    title: '給与の手取り計算',
+    desc: '額面年収から手取り（年・月）と税金・社会保険料の内訳を概算。2025年税制対応。',
+    ready: true,
+  },
+  {
+    href: '/tools/bonus/',
+    tag: '準備中',
+    title: 'ボーナスの手取り計算',
+    desc: '賞与の額面から手取りと控除額を計算。近日公開。',
+    ready: false,
+  },
+  {
+    href: '/tools/nisa/',
+    tag: '資産形成',
+    title: '積立NISAシミュレーター',
+    desc: '毎月の積立額と利回りから将来の資産額と運用益を複利で試算。NISAの節税額も表示。',
+    ready: true,
+  },
+  {
+    href: '/tools/loan/',
+    tag: '住宅',
+    title: '住宅ローン返済シミュレーター',
+    desc: '借入額・金利・年数から毎月の返済額・総返済額・利息を計算（元利均等）。',
+    ready: true,
+  },
+  {
+    href: '/tools/furusato/',
+    tag: '節税',
+    title: 'ふるさと納税 限度額',
+    desc: '年収と家族構成から自己負担2,000円で済む控除上限額の目安を計算。',
+    ready: true,
+  },
+  {
+    href: '/tools/taishoku/',
+    tag: '退職',
+    title: '退職金の手取り計算',
+    desc: '退職金と勤続年数から、退職所得控除・税金を引いた手取りを概算。',
+    ready: true,
+  },
+  {
+    href: '/tools/kanzan/',
+    tag: '換算',
+    title: '時給→年収 換算',
+    desc: '時給と労働時間から、日給・月収・年収（額面）をまとめて換算。',
+    ready: true,
+  },
+];
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'WebSite',
+  name: SITE.name,
+  url: SITE.url,
+  description: SITE.description,
+};
+---
+
+<Base title={`${SITE.name} | 無料の給与・税金シミュレーター`} path="" jsonLd={jsonLd}>
+  <section class="hero">
+    <h1>お金の「いくら？」を<br />すぐに計算できる無料ツール集</h1>
+    <p>給与の手取り、税金、社会保険料、資産形成。むずかしい計算を、入力するだけで概算します。2025年(令和7年)の最新税制に対応。</p>
+  </section>
+
+  <div class="grid">
+    {tools.map((t) => (
+      t.ready ? (
+        <a class="card" href={t.href}>
+          <span class="tag">{t.tag}</span>
+          <h3>{t.title}</h3>
+          <p>{t.desc}</p>
+        </a>
+      ) : (
+        <div class="card" style="opacity:.6;cursor:default;">
+          <span class="tag" style="background:#eef0f5;color:#6b7488;">{t.tag}</span>
+          <h3>{t.title}</h3>
+          <p>{t.desc}</p>
+        </div>
+      )
+    ))}
+  </div>
+
+  <section class="prose">
+    <h2>このサイトについて</h2>
+    <p>
+      {SITE.name}は、日本の給与・税金・資産形成にまつわる「お金の計算」を、専門知識がなくても数字を入れるだけで把握できる無料ツール集です。
+      会員登録は不要、すべてブラウザ内で計算するため入力した金額が外部に送信されることはありません。
+    </p>
+    <p>
+      税制や保険料率は毎年改正されます。本サイトは最新の制度を反映するよう更新していますが、計算結果はあくまで<strong>概算</strong>です。
+      正確な金額は給与明細・お住まいの自治体・税理士等でご確認ください。
+    </p>
+  </section>
+</Base>

@@ -1,0 +1,151 @@
+---
+import Base from '../../layouts/Base.astro';
+import { SITE } from '../../config.ts';
+
+const path = '/tools/loan';
+const title = '住宅ローン返済シミュレーター（元利均等）';
+const description =
+  '借入額・金利・返済年数を入れるだけで、毎月の返済額・総返済額・利息総額を計算。元利均等返済の無料シミュレーター。';
+
+const faqs = [
+  {
+    q: '3000万円を35年・金利1.5%で借りると毎月いくら？',
+    a: '元利均等返済の場合、毎月の返済額はおよそ91,855円、総返済額は約3,858万円（うち利息約858万円）になります。金利や年数を変えて本ツールで試算できます。',
+  },
+  {
+    q: '元利均等返済とは何ですか？',
+    a: '毎月の返済額（元金＋利息）が一定になる返済方式です。返済当初は利息の割合が大きく、徐々に元金の返済割合が増えていきます。日本の住宅ローンで最も一般的な方式です。',
+  },
+  {
+    q: '金利が0.1%違うとどれくらい変わりますか？',
+    a: '借入額が大きいほど影響も大きくなります。例えば3000万円・35年なら、金利が0.1%上がると総返済額はおよそ50万円以上増えることもあります。本ツールで実際の差を確認してみてください。',
+  },
+  {
+    q: 'ボーナス返済や繰り上げ返済には対応していますか？',
+    a: '本ツールは毎月一定額の元利均等返済のみの概算です。ボーナス併用返済・繰り上げ返済・変動金利の見直しは考慮していません。詳細は金融機関の試算をご利用ください。',
+  },
+];
+
+const jsonLd = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'ホーム', item: SITE.url + '/' },
+      { '@type': 'ListItem', position: 2, name: '住宅ローン返済シミュレーター', item: SITE.url + path + '/' },
+    ],
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: faqs.map((f) => ({
+      '@type': 'Question',
+      name: f.q,
+      acceptedAnswer: { '@type': 'Answer', text: f.a },
+    })),
+  },
+];
+---
+
+<Base title={title} description={description} path={path} jsonLd={jsonLd}>
+  <section class="hero" style="padding-bottom:6px;">
+    <h1>住宅ローン返済シミュレーター</h1>
+    <p>借入額・金利・年数を入れるだけで、毎月の返済額・総返済額・利息の合計を計算します（元利均等返済）。</p>
+  </section>
+
+  <div class="panel">
+    <form id="calc" autocomplete="off">
+      <div class="field">
+        <label for="principal">借入額<span class="hint"> ／ 円</span></label>
+        <input type="number" id="principal" inputmode="numeric" min="0" step="1000000" value="30000000" />
+      </div>
+      <div class="row">
+        <div class="field">
+          <label for="rate">金利（年利）<span class="hint"> ／ ％</span></label>
+          <input type="number" id="rate" inputmode="decimal" min="0" max="20" step="0.05" value="1.5" />
+        </div>
+        <div class="field">
+          <label for="years">返済年数<span class="hint"> ／ 年</span></label>
+          <input type="number" id="years" inputmode="numeric" min="1" max="50" step="1" value="35" />
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <div id="result" class="panel" aria-live="polite">
+    <div class="result-hero">
+      <p class="label">毎月の返済額</p>
+      <p class="big" id="r-monthly">—</p>
+      <p class="sub">総返済額 <strong id="r-total">—</strong></p>
+    </div>
+
+    <table class="breakdown">
+      <tbody>
+        <tr><td>借入額（元金）</td><td class="num" id="r-principal">—</td></tr>
+        <tr><td>利息の総額</td><td class="num" id="r-interest">—</td></tr>
+        <tr class="total"><td>総返済額</td><td class="num" id="r-total2">—</td></tr>
+        <tr><td class="muted">毎月の返済額</td><td class="num" id="r-monthly2">—</td></tr>
+      </tbody>
+    </table>
+
+    <div class="note">
+      <strong>ご注意：</strong>毎月一定額を返済する「元利均等返済」の概算です。ボーナス併用返済・繰り上げ返済・
+      変動金利の見直し・各種手数料は含みません。実際の返済額は金融機関の正式な試算でご確認ください。
+    </div>
+  </div>
+
+  <section class="prose">
+    <h2>住宅ローンは「金利」と「年数」で総額が大きく変わる</h2>
+    <p>
+      住宅ローンは借入額が大きく返済期間も長いため、わずかな金利差が総返済額に大きく影響します。
+      たとえば3,000万円を35年で借りる場合、金利1.0%と1.5%では総返済額が<strong>200万円以上</strong>変わることもあります。
+      複数の金融機関を比較し、自分に合った金利タイプ（変動・固定）を選ぶことが大切です。
+    </p>
+
+    <h3>毎月返済額の目安</h3>
+    <ul>
+      <li>無理のない返済額の目安は、一般に<strong>手取り月収の20〜25%以内</strong>と言われます。</li>
+      <li>本サイトの<a href="/tools/tedori/">手取り計算ツール</a>で月の手取りを把握してから、返済額を検討するのがおすすめです。</li>
+    </ul>
+
+    <h2>よくある質問</h2>
+    {faqs.map((f) => (
+      <details>
+        <summary>{f.q}</summary>
+        <p>{f.a}</p>
+      </details>
+    ))}
+  </section>
+
+  <p style="margin-top:24px;"><a href="/">← ほかの計算ツールを見る</a></p>
+</Base>
+
+<script>
+  import { calcLoan } from '../../lib/loan.ts';
+  import { yen } from '../../lib/tax.ts';
+
+  const $ = (id: string) => document.getElementById(id) as HTMLElement;
+  const principal = $('principal') as HTMLInputElement;
+  const rate = $('rate') as HTMLInputElement;
+  const years = $('years') as HTMLInputElement;
+
+  function render() {
+    const r = calcLoan({
+      principal: Number(principal.value) || 0,
+      annualRatePct: Number(rate.value) || 0,
+      years: Number(years.value) || 0,
+    });
+    $('r-monthly').textContent = yen(r.monthlyPayment);
+    $('r-monthly2').textContent = yen(r.monthlyPayment);
+    $('r-total').textContent = yen(r.totalPayment);
+    $('r-total2').textContent = yen(r.totalPayment);
+    $('r-principal').textContent = yen(Number(principal.value) || 0);
+    $('r-interest').textContent = yen(r.totalInterest);
+  }
+
+  for (const el of [principal, rate, years]) {
+    el.addEventListener('input', render);
+    el.addEventListener('change', render);
+  }
+  render();
+</script>

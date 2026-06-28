@@ -1,0 +1,129 @@
+---
+import Base from '../../layouts/Base.astro';
+import { SITE } from '../../config.ts';
+
+const path = '/tools/kanzan';
+const title = '時給→年収 換算ツール（日給・月収も）';
+const description =
+  '時給と労働時間から、日給・月収・年収をまとめて換算。「時給1,200円って年収いくら？」がすぐ分かる無料ツール。';
+
+const faqs = [
+  {
+    q: '時給1,200円は年収いくらですか？',
+    a: '1日8時間・月20日働く場合、月収は約19.2万円、年収は約230万円（額面）になります。労働時間や日数で変わるので本ツールで試算できます。',
+  },
+  {
+    q: '手取りはいくらになりますか？',
+    a: 'このツールは額面（税引き前）の換算です。手取りは社会保険料や税金が引かれます。換算した年収を「給与の手取り計算」ツールに入力すると手取りの目安が分かります。',
+  },
+  {
+    q: '残業代やボーナスは含まれますか？',
+    a: '含まれません。基本の時給×時間×日数のみの単純換算です。残業・各種手当・賞与がある場合は別途加算してください。',
+  },
+];
+
+const jsonLd = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'ホーム', item: SITE.url + '/' },
+      { '@type': 'ListItem', position: 2, name: '時給→年収 換算ツール', item: SITE.url + path + '/' },
+    ],
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: faqs.map((f) => ({
+      '@type': 'Question',
+      name: f.q,
+      acceptedAnswer: { '@type': 'Answer', text: f.a },
+    })),
+  },
+];
+---
+
+<Base title={title} description={description} path={path} jsonLd={jsonLd}>
+  <section class="hero" style="padding-bottom:6px;">
+    <h1>時給→年収 換算ツール</h1>
+    <p>時給と働き方を入れるだけで、日給・月収・年収（額面）をまとめて換算します。</p>
+  </section>
+
+  <div class="panel">
+    <form id="calc" autocomplete="off">
+      <div class="field">
+        <label for="hourly">時給<span class="hint"> ／ 円</span></label>
+        <input type="number" id="hourly" inputmode="numeric" min="0" step="10" value="1200" />
+      </div>
+      <div class="row">
+        <div class="field">
+          <label for="hours">1日の労働時間<span class="hint"> ／ 時間</span></label>
+          <input type="number" id="hours" inputmode="decimal" min="0" max="24" step="0.5" value="8" />
+        </div>
+        <div class="field">
+          <label for="days">1か月の労働日数<span class="hint"> ／ 日</span></label>
+          <input type="number" id="days" inputmode="numeric" min="0" max="31" step="1" value="20" />
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <div id="result" class="panel" aria-live="polite">
+    <div class="result-hero">
+      <p class="label">年収（額面）</p>
+      <p class="big" id="r-annual">—</p>
+      <p class="sub">月収 <strong id="r-monthly">—</strong>　／　日給 <strong id="r-daily">—</strong></p>
+    </div>
+
+    <div class="note">
+      これは額面（税引き前）の換算です。実際の手取りは社会保険料・税金が引かれます。
+      換算した年収を<a href="/tools/tedori/">給与の手取り計算</a>に入れると、手取りの目安が分かります。
+    </div>
+  </div>
+
+  <section class="prose">
+    <h2>時給から年収を考えるときのポイント</h2>
+    <ul>
+      <li>年収は「時給 × 1日の労働時間 × 月の労働日数 × 12か月」で概算できます。</li>
+      <li>同じ時給でも、労働時間や日数で年収は大きく変わります。</li>
+      <li>表示されるのは<strong>額面</strong>。実際の手取りは<a href="/tools/tedori/">手取り計算ツール</a>で確認しましょう。</li>
+    </ul>
+
+    <h2>よくある質問</h2>
+    {faqs.map((f) => (
+      <details>
+        <summary>{f.q}</summary>
+        <p>{f.a}</p>
+      </details>
+    ))}
+  </section>
+
+  <p style="margin-top:24px;"><a href="/">← ほかの計算ツールを見る</a></p>
+</Base>
+
+<script>
+  import { fromHourly } from '../../lib/convert.ts';
+  import { yen } from '../../lib/tax.ts';
+
+  const $ = (id: string) => document.getElementById(id) as HTMLElement;
+  const hourly = $('hourly') as HTMLInputElement;
+  const hours = $('hours') as HTMLInputElement;
+  const days = $('days') as HTMLInputElement;
+
+  function render() {
+    const r = fromHourly({
+      hourly: Number(hourly.value) || 0,
+      hoursPerDay: Number(hours.value) || 0,
+      daysPerMonth: Number(days.value) || 0,
+    });
+    $('r-annual').textContent = yen(r.annual);
+    $('r-monthly').textContent = yen(r.monthly);
+    $('r-daily').textContent = yen(r.daily);
+  }
+
+  for (const el of [hourly, hours, days]) {
+    el.addEventListener('input', render);
+    el.addEventListener('change', render);
+  }
+  render();
+</script>

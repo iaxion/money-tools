@@ -1,0 +1,43 @@
+/**
+ * サイト全体の設定。
+ *
+ * ★個人情報・環境ごとに変わる値はソースに直書きせず、環境変数から注入する★
+ *  ローカル: プロジェクト直下の `.env`（gitignore 済み・コミットされない）
+ *  本番:     Cloudflare Pages の「環境変数」/ GitHub Actions の Secrets 等で設定
+ *
+ * 使う環境変数（すべて任意。未設定でもビルドは通る）:
+ *  - PUBLIC_SITE_URL       公開URL（例 https://example.com）
+ *  - PUBLIC_CONTACT_EMAIL  問い合わせ先メール
+ *  - PUBLIC_ADSENSE_CLIENT Google AdSense パブリッシャーID（ca-pub-...）
+ *  - PUBLIC_SITE_NAME      サイト名（任意）
+ *  - PUBLIC_SITE_AUTHOR    運営者名（任意）
+ *
+ * ※ PUBLIC_ 接頭辞は Astro が環境変数を読み込むための規約。これらの値は最終的に
+ *    静的HTMLに出力される（=公開される）前提のものだけを入れること。秘密鍵等は入れない。
+ */
+
+const env = import.meta.env;
+
+const stripTrailingSlash = (url: string) => url.replace(/\/+$/, '');
+
+export interface SiteConfig {
+  name: string;
+  description: string;
+  url: string;
+  lang: string;
+  author: string;
+  contactEmail: string;
+  adsenseClient: string;
+}
+
+export const SITE: SiteConfig = {
+  name: env.PUBLIC_SITE_NAME || 'お金の計算ツール',
+  description:
+    '給与の手取り、税金、社会保険料などを無料で素早く計算できるツール集。2025年(令和7年)の最新税制に対応。',
+  // 未設定時はローカル開発用のURLにフォールバック
+  url: stripTrailingSlash(env.PUBLIC_SITE_URL || 'http://localhost:4321'),
+  lang: 'ja',
+  author: env.PUBLIC_SITE_AUTHOR || '運営者',
+  contactEmail: env.PUBLIC_CONTACT_EMAIL || '',
+  adsenseClient: env.PUBLIC_ADSENSE_CLIENT || '',
+};
