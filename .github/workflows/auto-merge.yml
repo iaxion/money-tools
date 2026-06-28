@@ -1,0 +1,60 @@
+name: Auto-merge
+
+# 自動改善PR(ブランチ auto/*)を、CIが緑になったら自動マージする。
+# 例外: src/lib/tax.ts（税率・控除＝お金の計算ロジック）を変更するPRは
+#       自動マージせず needs-human-review ラベルを付けて停止する（YMYL の安全弁）。
+#
+# CI ワークフロー(ci.yml)の完了をトリガーに動く。CIが成功し、対象が auto/* ブランチの
+# PR のときだけ判定する。
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  automerge:
+    runs-on: ubuntu-latest
+    # CI が成功し、auto/ 始まりのブランチのときだけ
+    if: >
+      github.event.workflow_run.conclusion == 'success' &&
+      startsWith(github.event.workflow_run.head_branch, 'auto/')
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 対象PRと変更ファイルを判定して自動マージ / 承認待ち化
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+        run: |
+          set -euo pipefail
+
+          # head ブランチに紐づく open PR 番号を取得
+          pr=$(gh pr list --state open --head "$HEAD_BRANCH" --json number --jq '.[0].number' || true)
+          if [ -z "${pr:-}" ] || [ "$pr" = "null" ]; then
+            echo "対象ブランチ $HEAD_BRANCH に open PR が見つからないため終了。"
+            exit 0
+          fi
+          echo "対象 PR: #$pr ($HEAD_BRANCH)"
+
+          # 変更ファイル一覧
+          files=$(gh pr view "$pr" --json files --jq '.files[].path')
+          echo "変更ファイル:"; echo "$files"
+
+          # 税率・控除ロジックに触れていないか
+          if echo "$files" | grep -qx 'src/lib/tax.ts'; then
+            echo "tax.ts を含むため自動マージしない。承認待ちにする。"
+            # ラベルが無ければ作る（初回用・冪等）
+            gh label create "needs-human-review" --color FBCA04 \
+              --description "税率/控除など要・人手レビュー（自動マージ停止）" 2>/dev/null || true
+            gh pr edit "$pr" --add-label "needs-human-review" || true
+            gh pr comment "$pr" --body "⚠️ このPRは税率・控除ロジック(\`src/lib/tax.ts\`)を変更するため、自動マージを停止しました。公式値を確認のうえ手動でマージしてください（AUTONOMY.md 参照）。" || true
+            exit 0
+          fi
+
+          echo "安全な変更のため自動マージ(squash)します。"
+          gh pr merge "$pr" --squash --delete-branch
