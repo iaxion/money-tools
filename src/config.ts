@@ -34,8 +34,8 @@ export const SITE: SiteConfig = {
   name: env.PUBLIC_SITE_NAME || 'お金の計算ツール',
   description:
     '給与の手取り、税金、社会保険料などを無料で素早く計算できるツール集。2025年(令和7年)の最新税制に対応。',
-  // 未設定時はローカル開発用のURLにフォールバック
-  url: stripTrailingSlash(env.PUBLIC_SITE_URL || 'http://localhost:4321'),
+  // 公開URL。環境変数が無ければ既定の公開URLを使う（公開URLは秘密情報ではない）。
+  url: stripTrailingSlash(env.PUBLIC_SITE_URL || 'https://money-tools.iaxion.dev'),
   lang: 'ja',
   author: env.PUBLIC_SITE_AUTHOR || '運営者',
   contactEmail: env.PUBLIC_CONTACT_EMAIL || '',
