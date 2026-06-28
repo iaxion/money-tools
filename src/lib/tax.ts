@@ -1,10 +1,10 @@
 /**
  * 給与の手取り概算エンジン（日本）
  *
- * 対象年度: 2025年(令和7年)分の所得税・住民税・社会保険料率に基づく概算。
+ * 対象年度: 2026年(令和8年)分の所得税・住民税・社会保険料率に基づく概算。
  *
  * 主な前提（概算のため実際の給与明細とは数千円〜数万円ずれる場合があります）:
- *  - 社会保険は「協会けんぽ 東京支部 2025年度(令和7年度)」の料率を使用。
+ *  - 社会保険は「協会けんぽ 東京支部 2026年度(令和8年度)」の料率を使用（子ども・子育て支援金0.23%込み）。
  *  - 健康保険・厚生年金は本来「標準報酬月額」の等級表で決まるが、
  *    ここでは年収に料率を直接適用し、上限のみ反映する簡略計算。
  *  - 賞与の社会保険上限（賞与ごとの上限）は簡略化し年収に含めて計算。
@@ -51,16 +51,16 @@ export interface TedoriResult {
   takeHomeRate: number;
 }
 
-/** 2025年度(令和7年度)の料率・上限 */
+/** 2026年度(令和8年度)の料率・上限 */
 export const RATES = {
-  /** 健康保険料率（協会けんぽ東京・全額。本人はこの半分） */
-  health: 0.0991,
-  /** 健康＋介護保険料率（40歳以上・全額。本人はこの半分） */
-  healthWithCare: 0.115,
+  /** 健康保険料率（協会けんぽ東京9.85%＋子ども・子育て支援金0.23%・全額。本人はこの半分） */
+  health: 0.1008,
+  /** 健康＋介護＋支援金（40歳以上・全額。9.85%+1.62%+0.23%。本人はこの半分） */
+  healthWithCare: 0.117,
   /** 厚生年金保険料率（全額。本人はこの半分） */
   pension: 0.183,
-  /** 雇用保険料率（一般の事業・本人負担分） */
-  employment: 0.0055,
+  /** 雇用保険料率（一般の事業・本人負担分。令和8年度0.5%） */
+  employment: 0.005,
   /** 厚生年金の標準報酬月額の上限 */
   pensionMonthlyCap: 650_000,
   /** 健康保険の標準報酬月額の上限 */
@@ -77,9 +77,9 @@ export const RATES = {
   reconstructionRate: 0.021,
 } as const;
 
-/** 給与所得控除（2025年改正後）。給与収入から差し引く。 */
+/** 給与所得控除（2026年・令和8年。最低保障74万円）。給与収入から差し引く。 */
 export function kyuyoShotokuKojo(income: number): number {
-  if (income <= 1_900_000) return Math.min(income, 650_000);
+  if (income <= 2_200_000) return Math.min(income, 740_000);
   if (income <= 3_600_000) return income * 0.3 + 80_000;
   if (income <= 6_600_000) return income * 0.2 + 440_000;
   if (income <= 8_500_000) return income * 0.1 + 1_100_000;
@@ -87,15 +87,13 @@ export function kyuyoShotokuKojo(income: number): number {
 }
 
 /**
- * 所得税の基礎控除（2025・2026年分の特例上乗せを含む）。
+ * 所得税の基礎控除（令和8年・9年分。本則62万＋特例上乗せ）。
  * 合計所得金額（＝給与所得）に応じて段階的に変動する。
  */
 export function kisoKojoIncomeTax(goukeiShotoku: number): number {
-  if (goukeiShotoku <= 1_320_000) return 950_000;
-  if (goukeiShotoku <= 3_360_000) return 880_000;
-  if (goukeiShotoku <= 4_890_000) return 680_000;
-  if (goukeiShotoku <= 6_550_000) return 630_000;
-  if (goukeiShotoku <= 23_500_000) return 580_000;
+  if (goukeiShotoku <= 4_890_000) return 1_040_000;
+  if (goukeiShotoku <= 6_550_000) return 670_000;
+  if (goukeiShotoku <= 23_500_000) return 620_000;
   if (goukeiShotoku <= 24_000_000) return 480_000;
   if (goukeiShotoku <= 24_500_000) return 320_000;
   if (goukeiShotoku <= 25_000_000) return 160_000;

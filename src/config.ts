@@ -36,7 +36,7 @@ export interface SiteConfig {
 export const SITE: SiteConfig = {
   name: env.PUBLIC_SITE_NAME || 'お金の計算ツール',
   description:
-    '給与の手取り、税金、社会保険料などを無料で素早く計算できるツール集。2025年(令和7年)の最新税制に対応。',
+    '給与の手取り、税金、社会保険料などを無料で素早く計算できるツール集。2026年(令和8年)の最新税制に対応。',
   // 公開URLはビルド変数から注入。未設定時は開発用 localhost にフォールバック（実URLは持たない）。
   url: stripTrailingSlash(env.PUBLIC_SITE_URL || 'http://localhost:4321'),
   lang: 'ja',
