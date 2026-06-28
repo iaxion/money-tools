@@ -1,0 +1,24 @@
+---
+/**
+ * アフィリエイトCTA枠。広告リンクのHTML（ビルド変数）が設定されている時だけ表示する。
+ * ステマ規制（景品表示法）対応として「広告・PR」表記を必ず付ける。
+ */
+export interface Props {
+  /** A8等の広告リンクHTMLスニペット（空なら何も表示しない） */
+  html: string;
+  /** 文脈に合う見出し（例: NISAを始めるなら） */
+  heading: string;
+  /** 補足説明（任意） */
+  note?: string;
+}
+const { html, heading, note } = Astro.props;
+---
+
+{html && (
+  <aside class="aff-cta" aria-label="広告">
+    <span class="aff-cta-pr">広告・PR</span>
+    <p class="aff-cta-heading">{heading}</p>
+    {note && <p class="aff-cta-note">{note}</p>}
+    <div class="aff-cta-link" set:html={html} />
+  </aside>
+)}

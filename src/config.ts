@@ -45,3 +45,16 @@ export const SITE: SiteConfig = {
   adsenseClient: env.PUBLIC_ADSENSE_CLIENT || '',
   gscVerification: env.PUBLIC_GSC_VERIFICATION || '',
 };
+
+/**
+ * アフィリエイトリンク（A8等の広告コードHTML）。
+ * アカウント固有で変わる値なのでソースに直書きせず、ビルド変数から注入する。
+ * 値は A8 の「広告リンク作成」で得たHTMLスニペット（1行）をそのまま設定。
+ * 空なら該当CTAは表示されない。
+ */
+export const AFFILIATES = {
+  /** NISA/株 証券口座（例: DMM株）→ NISAツールに表示 */
+  brokerage: env.PUBLIC_AFF_BROKERAGE || '',
+  /** 楽天ふるさと納税 → ふるさと納税ツールに表示 */
+  rakutenFurusato: env.PUBLIC_AFF_RAKUTEN_FURUSATO || '',
+} as const;

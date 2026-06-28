@@ -1,6 +1,7 @@
 ---
 import Base from '../../layouts/Base.astro';
-import { SITE } from '../../config.ts';
+import AffiliateCTA from '../../components/AffiliateCTA.astro';
+import { SITE, AFFILIATES } from '../../config.ts';
 
 const path = '/tools/nisa';
 const title = '積立NISA・投資シミュレーター（複利計算）';
@@ -102,6 +103,12 @@ const jsonLd = [
       実際の運用は価格変動・手数料・分配金等で結果が変わり、<strong>元本割れの可能性</strong>があります。投資はご自身の判断と責任で行ってください。
     </div>
   </div>
+
+  <AffiliateCTA
+    html={AFFILIATES.brokerage}
+    heading="つみたてNISAを始めるなら（証券口座）"
+    note="NISA・米国株もスマホアプリで。まずは無料の口座開設から。"
+  />
 
   <section class="prose">
     <h2>複利の力（長く続けるほど増える理由）</h2>

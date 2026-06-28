@@ -1,7 +1,8 @@
 ---
 import Base from '../../layouts/Base.astro';
 import Freshness from '../../components/Freshness.astro';
-import { SITE } from '../../config.ts';
+import AffiliateCTA from '../../components/AffiliateCTA.astro';
+import { SITE, AFFILIATES } from '../../config.ts';
 
 const path = '/tools/furusato';
 const title = 'ふるさと納税 限度額シミュレーター（2026年）';
@@ -103,6 +104,12 @@ const jsonLd = [
     </div>
     <Freshness />
   </div>
+
+  <AffiliateCTA
+    html={AFFILIATES.rakutenFurusato}
+    heading="楽天でふるさと納税するなら"
+    note="上限額の範囲で、楽天ポイントを貯めながら返礼品を。"
+  />
 
   <section class="prose">
     <h2>ふるさと納税のしくみ</h2>
