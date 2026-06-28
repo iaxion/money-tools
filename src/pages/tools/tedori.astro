@@ -2,11 +2,26 @@
 import Base from '../../layouts/Base.astro';
 import Freshness from '../../components/Freshness.astro';
 import { SITE } from '../../config.ts';
+import { calcTedori } from '../../lib/tax.ts';
 
 const path = '/tools/tedori';
 const title = '給与の手取り計算（2026年・令和8年対応）';
 const description =
   '額面年収を入力するだけで、手取り（年収・月収）と所得税・住民税・社会保険料の内訳を概算。2026年(令和8年)の税制改正に対応した無料シミュレーター。';
+
+/** 年収別早見表（独身・扶養なし・40歳未満） */
+const HAYAMI_INCOMES = [
+  200, 250, 300, 350, 400, 450, 500, 550, 600, 700, 800, 1000, 1200, 1500,
+];
+const hayami = HAYAMI_INCOMES.map((man) => {
+  const r = calcTedori({ annualIncome: man * 10_000, age40OrOver: false, hasSpouse: false, dependents: 0 });
+  return {
+    income: man,
+    takeHomeAnnual: Math.round(r.takeHomeAnnual / 10_000),
+    takeHomeMonthly: Math.round(r.takeHomeMonthly / 10_000 * 10) / 10,
+    rate: Math.round(r.takeHomeRate * 1000) / 10,
+  };
+});
 
 const faqs = [
   {
@@ -144,6 +159,33 @@ const jsonLd = [
         <p>{f.a}</p>
       </details>
     ))}
+  </section>
+
+  <section class="prose">
+    <h2>年収別 手取り早見表（2026年・独身・扶養なし）</h2>
+    <p>下表は独身・扶養親族なし・40歳未満・協会けんぽ東京の場合の概算です。実際の手取りは年齢・家族構成・自治体により変わります。上のシミュレーターで条件を変えて確認してください。</p>
+    <div style="overflow-x:auto;">
+      <table class="breakdown hayami-table">
+        <thead>
+          <tr>
+            <th>額面年収</th>
+            <th>手取り年収</th>
+            <th>手取り月収</th>
+            <th>手取り率</th>
+          </tr>
+        </thead>
+        <tbody>
+          {hayami.map((row) => (
+            <tr>
+              <td class="num">{row.income}万円</td>
+              <td class="num">約{row.takeHomeAnnual}万円</td>
+              <td class="num">約{row.takeHomeMonthly}万円</td>
+              <td class="num">{row.rate}%</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   </section>
 
   <p style="margin-top:24px;"><a href="/">← ほかの計算ツールを見る</a></p>
