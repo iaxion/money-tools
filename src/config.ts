@@ -55,6 +55,6 @@ export const SITE: SiteConfig = {
 export const AFFILIATES = {
   /** NISA/株 証券口座（例: DMM株）→ NISAツールに表示 */
   brokerage: env.PUBLIC_AFF_BROKERAGE || '',
-  /** 楽天ふるさと納税 → ふるさと納税ツールに表示 */
-  rakutenFurusato: env.PUBLIC_AFF_RAKUTEN_FURUSATO || '',
+  /** ふるさと納税サイト（楽天/ふるさとチョイス等）→ ふるさと納税ツールに表示 */
+  furusato: env.PUBLIC_AFF_FURUSATO || '',
 } as const;

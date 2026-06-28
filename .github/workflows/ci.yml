@@ -1,0 +1,38 @@
+name: CI
+
+# 品質ゲート: main への push と、main 宛ての PR でビルドが通ることを検証する。
+# 夜間の自動改善（PR）が壊れたコードをデプロイしないための土台。
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# 同一ブランチの古い実行はキャンセルして無駄を省く（トークン/CI分の節約）。
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build (静的サイト生成が成功すること)
+        run: npm run build
+
+      - name: 鮮度チェック（制度データの見直し期限）
+        # 見直し期限を過ぎていれば警告（ビルドは失敗させない＝デプロイは止めない）。
+        run: node scripts/check-freshness.mjs || true
