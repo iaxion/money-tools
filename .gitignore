@@ -25,3 +25,9 @@ pnpm-debug.log*
 
 # Slack Webhook（ローカル秘匿）
 .slack-webhook
+
+# wrangler files
+.wrangler
+.dev.vars*
+!.dev.vars.example
+!.env.example
