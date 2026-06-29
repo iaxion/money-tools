@@ -30,6 +30,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: 計算エンジンのユニットテスト（誤計算を自動ブロック＝フルオートの安全弁）
+        run: npm test
+
       - name: Build (静的サイト生成が成功すること)
         run: npm run build
 
