@@ -59,6 +59,14 @@ const fullTitle = path === '' ? title : `${title} | ${SITE.name}`;
         crossorigin="anonymous"
       ></script>
     )}
+
+    {SITE.analyticsToken && (
+      <script
+        defer
+        src="https://static.cloudflareinsights.com/beacon.min.js"
+        data-cf-beacon={`{"token": "${SITE.analyticsToken}"}`}
+      ></script>
+    )}
   </head>
   <body>
     <header class="site-header">

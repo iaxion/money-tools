@@ -31,6 +31,8 @@ export interface SiteConfig {
   adsenseClient: string;
   /** Google Search Console のメタタグ認証コード（content の値のみ） */
   gscVerification: string;
+  /** Cloudflare Web Analytics のビーコントークン（Cookie不要・計測用） */
+  analyticsToken: string;
 }
 
 export const SITE: SiteConfig = {
@@ -44,6 +46,7 @@ export const SITE: SiteConfig = {
   contactEmail: env.PUBLIC_CONTACT_EMAIL || '',
   adsenseClient: env.PUBLIC_ADSENSE_CLIENT || '',
   gscVerification: env.PUBLIC_GSC_VERIFICATION || '',
+  analyticsToken: env.PUBLIC_CF_BEACON || '',
 };
 
 /**

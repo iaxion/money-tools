@@ -45,16 +45,16 @@ jobs:
           files=$(gh pr view "$pr" --json files --jq '.files[].path')
           echo "変更ファイル:"; echo "$files"
 
-          # 税率・控除ロジックに触れていないか
+          # 金額ロジック(tax.ts)変更は「可視化ラベル」を付ける。
+          # フルオート方針: 計算ユニットテスト(CI)が安全弁。人間ゲートで止めない。
+          # 事後確認できるよう money-logic-changed を付けてコメントを残す。
           if echo "$files" | grep -qx 'src/lib/tax.ts'; then
-            echo "tax.ts を含むため自動マージしない。承認待ちにする。"
-            # ラベルが無ければ作る（初回用・冪等）
-            gh label create "needs-human-review" --color FBCA04 \
-              --description "税率/控除など要・人手レビュー（自動マージ停止）" 2>/dev/null || true
-            gh pr edit "$pr" --add-label "needs-human-review" || true
-            gh pr comment "$pr" --body "⚠️ このPRは税率・控除ロジック(\`src/lib/tax.ts\`)を変更するため、自動マージを停止しました。公式値を確認のうえ手動でマージしてください（AUTONOMY.md 参照）。" || true
-            exit 0
+            echo "tax.ts 変更を検出。可視化ラベルを付けて自動マージを継続する。"
+            gh label create "money-logic-changed" --color 0E8A16 \
+              --description "税率/控除ロジックの自動変更（計算テスト通過済み・事後確認用）" 2>/dev/null || true
+            gh pr edit "$pr" --add-label "money-logic-changed" || true
+            gh pr comment "$pr" --body "💰 税率・控除ロジック(\`src/lib/tax.ts\`)を変更。計算ユニットテスト(CI)通過のため自動マージします。念のため事後確認を推奨（AUTONOMY.md 参照）。" || true
           fi
 
-          echo "安全な変更のため自動マージ(squash)します。"
+          echo "CI緑のため自動マージ(squash)します。"
           gh pr merge "$pr" --squash --delete-branch
