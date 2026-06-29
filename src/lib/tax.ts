@@ -193,6 +193,95 @@ export function calcTedori(input: TedoriInput): TedoriResult {
   };
 }
 
+export interface BonusInput {
+  /** 賞与の額面（円） */
+  bonus: number;
+  /** 月給の額面（前月の総支給額。所得税率推定に使用）*/
+  monthlySalary: number;
+  /** 40歳以上64歳以下か（介護保険の対象） */
+  age40OrOver: boolean;
+  /** 配偶者控除の対象となる配偶者がいるか */
+  hasSpouse: boolean;
+  /** 扶養親族の人数（16歳以上・一般扶養として概算） */
+  dependents: number;
+}
+
+export interface BonusResult {
+  /** 賞与額面 */
+  bonus: number;
+  /** 健康保険料（介護保険込み・本人負担） */
+  health: number;
+  /** 厚生年金保険料（本人負担） */
+  pension: number;
+  /** 雇用保険料（本人負担） */
+  employment: number;
+  /** 社会保険料合計 */
+  socialInsuranceTotal: number;
+  /** 所得税（復興特別所得税込み） */
+  incomeTax: number;
+  /** 控除合計 */
+  totalDeductions: number;
+  /** 手取り賞与 */
+  takeHome: number;
+  /** 手取り率 */
+  takeHomeRate: number;
+}
+
+/**
+ * 賞与（ボーナス）の手取りを概算する。
+ *
+ * 社会保険料は賞与専用の計算（標準賞与額ベース・厚生年金は1回150万円上限）。
+ * 所得税は「月給×12」と「月給×12＋賞与」の年間所得税の差額で近似
+ * （公式の賞与源泉徴収率表と近似値になるが完全一致ではない）。
+ * 住民税は賞与から直接源泉されないため計上しない（翌年の住民税に反映）。
+ */
+export function calcBonus(input: BonusInput): BonusResult {
+  const bonus = Math.max(0, Math.floor(input.bonus));
+  const monthly = Math.max(0, Math.floor(input.monthlySalary));
+
+  // 標準賞与額（1,000円未満切り捨て）
+  const stdBonus = Math.floor(bonus / 1_000) * 1_000;
+
+  // 健康保険・介護保険（賞与から）
+  const healthRate = input.age40OrOver ? RATES.healthWithCare : RATES.health;
+  const health = Math.floor((stdBonus * healthRate) / 2);
+
+  // 厚生年金（1回の賞与につき上限150万円）
+  const pensionBase = Math.min(stdBonus, 1_500_000);
+  const pension = Math.floor((pensionBase * RATES.pension) / 2);
+
+  // 雇用保険
+  const employment = Math.floor(bonus * RATES.employment);
+
+  const socialInsuranceTotal = health + pension + employment;
+
+  // 所得税：月給×12 と 月給×12+賞与 の年間所得税差額で近似
+  const annualBase = monthly * 12;
+  const params = {
+    age40OrOver: input.age40OrOver,
+    hasSpouse: input.hasSpouse,
+    dependents: input.dependents,
+  };
+  const taxBase = calcTedori({ annualIncome: annualBase, ...params }).incomeTax;
+  const taxWithBonus = calcTedori({ annualIncome: annualBase + bonus, ...params }).incomeTax;
+  const incomeTax = Math.max(0, taxWithBonus - taxBase);
+
+  const totalDeductions = socialInsuranceTotal + incomeTax;
+  const takeHome = Math.max(0, bonus - totalDeductions);
+
+  return {
+    bonus,
+    health,
+    pension,
+    employment,
+    socialInsuranceTotal,
+    incomeTax,
+    totalDeductions,
+    takeHome,
+    takeHomeRate: bonus > 0 ? takeHome / bonus : 0,
+  };
+}
+
 /** 円のカンマ区切り表記 */
 export function yen(n: number): string {
   return '¥' + Math.round(n).toLocaleString('ja-JP');
