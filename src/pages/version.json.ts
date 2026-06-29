@@ -7,22 +7,16 @@ import type { APIRoute } from 'astro';
  * 「最新コミットが本当にデプロイされたか」を機械的に検証できる
  * （`.github/workflows/deploy-check.yml` が利用）。
  *
- * デプロイ基盤ごとにビルド時の環境変数名が違うので順に拾う:
- *  - Cloudflare Workers Builds … `WORKERS_CI_COMMIT_SHA`
- *  - Cloudflare Pages          … `CF_PAGES_COMMIT_SHA`
- *  - GitHub Actions            … `GITHUB_SHA`
- *
- * ビルド時に値を埋め込みたいので必ず静的生成する（prerender）。
+ * SHA は astro.config.mjs がビルド時に解決して `__COMMIT_SHA__` として注入する
+ * （デプロイ基盤の環境変数 → git rev-parse の順。基盤の変数名に依存しない）。
+ * ビルド時に値を固定したいので必ず静的生成する。
  */
+declare const __COMMIT_SHA__: string;
+
 export const prerender = true;
 
 export const GET: APIRoute = () => {
-  const sha =
-    process.env.WORKERS_CI_COMMIT_SHA ||
-    process.env.CF_PAGES_COMMIT_SHA ||
-    process.env.GITHUB_SHA ||
-    'dev';
-  const body = JSON.stringify({ sha, builtAt: new Date().toISOString() });
+  const body = JSON.stringify({ sha: __COMMIT_SHA__, builtAt: new Date().toISOString() });
   return new Response(body, {
     headers: {
       'Content-Type': 'application/json; charset=utf-8',
