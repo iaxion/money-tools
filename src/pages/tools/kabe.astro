@@ -1,0 +1,194 @@
+---
+import Base from '../../layouts/Base.astro';
+import Freshness from '../../components/Freshness.astro';
+import { SITE } from '../../config.ts';
+import { calcKabe } from '../../lib/kabe.ts';
+
+const path = '/tools/kabe';
+const title = '年収の壁 判定（2026年・令和8年対応）| 106万・130万・178万円';
+const description =
+  '年収を入力するだけで、106万・130万・178万円などの「年収の壁」を超えているか即判定。社会保険の扶養・所得税への影響を分かりやすく解説。2026年(令和8年)税制改正対応。';
+
+const walls = calcKabe(0).walls;
+
+const faqs = [
+  {
+    q: '年収の壁とは何ですか？',
+    a: '社会保険や税金の仕組み上、特定の年収を超えると急に負担が増える「段差」のことです。代表的なものが106万・130万・178万円の壁で、知らずに超えてしまうと手取りが減る「働き損」になる場合があります。',
+  },
+  {
+    q: '106万円の壁はどんな人に関係しますか？',
+    a: '週20時間以上・月賃金88,000円以上・2か月超の見込みで働き、51人以上の企業に勤めるパート・アルバイトの方が対象です。この壁を超えると健康保険・厚生年金への加入義務が生じます（2024年10月から51人以上に拡大）。',
+  },
+  {
+    q: '130万円の壁を超えるとどうなりますか？',
+    a: '配偶者や親の健康保険の「被扶養者」から外れます。自分で国民健康保険か、職場の社会保険に加入する必要があり、保険料の自己負担が発生します。扶養から外れる基準は原則「今後1年間の見込み収入130万円未満」です（60歳未満の場合）。',
+  },
+  {
+    q: '178万円の壁とは何ですか？',
+    a: '2026年（令和8年）の税制改正で誕生した新しい壁です。給与所得控除の最低保障が74万円、基礎控除が最大104万円に引き上げられた結果、この2つを合計した178万円が所得税のかからない上限になりました。2025年以前の「103万円の壁」が178万円に大幅引き上げられたものです（2026年・2027年の特例）。',
+  },
+  {
+    q: '年収の壁を超えても働き損にならない方法はありますか？',
+    a: '106万円の壁については、社会保険に加入すると手取りは一時的に減りますが、将来の厚生年金が増えるメリットがあります。130万円の壁については、130万円を少し超えるだけでは手取りが減りやすいため、扶養を外れても保険料分を上回る収入を目指すか、年収を130万円未満に抑えるかを検討する必要があります。具体的な金額は上のシミュレーターでお試しください。',
+  },
+];
+
+const jsonLd = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'ホーム', item: SITE.url + '/' },
+      { '@type': 'ListItem', position: 2, name: '年収の壁 判定', item: SITE.url + path + '/' },
+    ],
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: faqs.map((f) => ({
+      '@type': 'Question',
+      name: f.q,
+      acceptedAnswer: { '@type': 'Answer', text: f.a },
+    })),
+  },
+];
+---
+
+<Base title={title} description={description} path={path} jsonLd={jsonLd}>
+  <section class="hero" style="padding-bottom:6px;">
+    <h1>年収の壁 判定</h1>
+    <p>見込み年収を入力するだけで、主要な「年収の壁」を超えているか即座に判定します。2026年(令和8年)の税制改正対応。</p>
+  </section>
+
+  <div class="panel">
+    <div class="field">
+      <label for="income">見込み年収（額面・賞与込み）<span class="hint"> ／ 円</span></label>
+      <input type="number" id="income" inputmode="numeric" min="0" step="100000" value="1200000" />
+    </div>
+  </div>
+
+  <div id="result" class="panel" aria-live="polite">
+    <div id="walls-list"></div>
+    <div class="note">
+      <strong>概算についての注意：</strong>
+      106万円の壁の適用は企業規模・労働条件により異なります。130万円の壁の認定基準は加入する健保組合によって異なる場合があります。配偶者控除・扶養控除に関わる壁（旧103万円など）は2026年税制改正で変更があるため、詳細は<a href="https://www.nta.go.jp/" target="_blank" rel="noopener">国税庁ウェブサイト</a>でご確認ください。
+    </div>
+    <Freshness />
+  </div>
+
+  <section class="prose">
+    <h2>「年収の壁」とは</h2>
+    <p>
+      パートタイマーや短時間労働者が年収を増やす際に注意すべき「年収の壁」とは、社会保険や税制の仕組み上、特定の年収を超えると急に手取りが減る「段差」のことです。
+      代表的なものが以下の3つです。
+    </p>
+
+    <h3>主な3つの壁（2026年現在）</h3>
+    <div style="overflow-x:auto;">
+      <table class="breakdown">
+        <thead>
+          <tr>
+            <th>壁</th>
+            <th>主な影響</th>
+            <th>対象者</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>106万円</strong></td>
+            <td>短時間労働者が社会保険（健保・厚年）に加入義務</td>
+            <td>週20h以上・51人以上の企業</td>
+          </tr>
+          <tr>
+            <td><strong>130万円</strong></td>
+            <td>配偶者・親の健保の被扶養者から外れる</td>
+            <td>扶養家族として認定されていた方</td>
+          </tr>
+          <tr>
+            <td><strong>178万円</strong></td>
+            <td>所得税がかかり始める（2026年改正後の新基準）</td>
+            <td>給与所得者全般</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>旧「103万円の壁」はどうなった？</h3>
+    <p>
+      2025年以前は給与所得控除55万円＋基礎控除48万円＝103万円が所得税の課税最低限（「103万円の壁」）でした。
+      2026年（令和8年）の税制改正で給与所得控除の最低保障が<strong>74万円</strong>、基礎控除が最大<strong>104万円</strong>に引き上げられ、
+      課税最低限が<strong>178万円</strong>に大幅に上がりました（令和8年・9年の特例措置）。
+      これにより、年収178万円以下の給与所得者は所得税の納付が不要になります。
+    </p>
+
+    <h2>よくある質問</h2>
+    {faqs.map((f) => (
+      <details>
+        <summary>{f.q}</summary>
+        <p>{f.a}</p>
+      </details>
+    ))}
+  </section>
+
+  <section class="prose">
+    <h2>関連ツール</h2>
+    <ul>
+      <li><a href="/tools/tedori/">給与の手取り計算</a> — 年収から手取りと税金の内訳を概算</li>
+      <li><a href="/tools/furusato/">ふるさと納税 限度額シミュレーター</a> — 年収別の控除上限を計算</li>
+      <li><a href="/tools/bonus/">ボーナスの手取り計算</a> — 賞与の手取りを概算</li>
+    </ul>
+  </section>
+
+  <p style="margin-top:24px;"><a href="/">← ほかの計算ツールを見る</a></p>
+</Base>
+
+<script>
+  import { calcKabe } from '../../lib/kabe.ts';
+
+  const input = document.getElementById('income') as HTMLInputElement;
+  const container = document.getElementById('walls-list')!;
+
+  const STATUS_COLORS: Record<string, string> = {
+    crossed: '#d32f2f',
+    near: '#e65100',
+    safe: '#2e7d32',
+  };
+
+  function fmt(n: number): string {
+    return Math.round(Math.abs(n) / 10_000).toLocaleString('ja-JP') + '万円';
+  }
+
+  function render() {
+    const income = Number(input.value) || 0;
+    const { walls, nextWall } = calcKabe(income);
+
+    const items = walls
+      .map((w) => {
+        const isNext = nextWall?.id === w.id;
+        const statusKey = w.crossed ? 'crossed' : isNext ? 'near' : 'safe';
+        const color = STATUS_COLORS[statusKey];
+        const icon = w.crossed ? '⚠️' : isNext ? '📍' : '✅';
+        const marginText = w.crossed
+          ? `${fmt(w.margin)}オーバー`
+          : `あと ${fmt(w.margin)}`;
+        const statusText = w.crossed ? '超えています' : '未到達';
+
+        return `<div class="kabe-item" style="border-left:4px solid ${color};padding:12px 16px;margin-bottom:12px;background:#fafafa;border-radius:4px;">
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+    <span style="font-size:1.25em;">${icon}</span>
+    <strong style="color:${color};">${w.label}</strong>
+    <span style="margin-left:auto;font-size:.85em;color:${color};font-weight:600;">${statusText}</span>
+  </div>
+  <p style="margin:0 0 4px;font-size:.9em;color:#555;">${marginText}（壁：${(w.threshold / 10_000).toLocaleString('ja-JP')}万円）</p>
+  <p style="margin:0;font-size:.85em;color:#444;">${w.impact}</p>
+</div>`;
+      })
+      .join('');
+
+    container.innerHTML = items;
+  }
+
+  input.addEventListener('input', render);
+  render();
+</script>

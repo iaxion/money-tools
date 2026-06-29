@@ -5,6 +5,7 @@ import { calcInvest } from './invest.ts';
 import { calcTaishoku, retirementDeduction } from './taishoku.ts';
 import { calcFurusato } from './furusato.ts';
 import { fromHourly } from './convert.ts';
+import { calcKabe } from './kabe.ts';
 
 /**
  * 計算エンジンの安全弁テスト（フルオート運用の品質ゲート）。
@@ -153,6 +154,49 @@ describe('時給→年収 fromHourly（厳密値）', () => {
     expect(r.daily).toBe(9_600);
     expect(r.monthly).toBe(192_000);
     expect(r.annual).toBe(2_304_000);
+  });
+});
+
+describe('年収の壁 calcKabe', () => {
+  it('不変条件: margin = threshold - income', () => {
+    for (const income of [800_000, 1_200_000, 1_500_000, 2_000_000]) {
+      const r = calcKabe(income);
+      for (const w of r.walls) {
+        expect(w.margin).toBe(w.threshold - income);
+      }
+    }
+  });
+
+  it('100万円: 3壁すべて未到達、nextWallはw106', () => {
+    const r = calcKabe(1_000_000);
+    expect(r.walls.every((w) => !w.crossed)).toBe(true);
+    expect(r.nextWall?.id).toBe('w106');
+  });
+
+  it('120万円: 106万の壁のみ超過、nextWallはw130', () => {
+    const r = calcKabe(1_200_000);
+    expect(r.walls.find((w) => w.id === 'w106')?.crossed).toBe(true);
+    expect(r.walls.find((w) => w.id === 'w130')?.crossed).toBe(false);
+    expect(r.nextWall?.id).toBe('w130');
+  });
+
+  it('140万円: 106・130を超過、178は未到達', () => {
+    const r = calcKabe(1_400_000);
+    expect(r.walls.find((w) => w.id === 'w106')?.crossed).toBe(true);
+    expect(r.walls.find((w) => w.id === 'w130')?.crossed).toBe(true);
+    expect(r.walls.find((w) => w.id === 'w178')?.crossed).toBe(false);
+    expect(r.nextWall?.id).toBe('w178');
+  });
+
+  it('200万円: 3壁すべて超過、nextWallはnull', () => {
+    const r = calcKabe(2_000_000);
+    expect(r.walls.every((w) => w.crossed)).toBe(true);
+    expect(r.nextWall).toBeNull();
+  });
+
+  it('ちょうど106万円の境界: 超過判定', () => {
+    expect(calcKabe(1_060_000).walls.find((w) => w.id === 'w106')?.crossed).toBe(true);
+    expect(calcKabe(1_059_999).walls.find((w) => w.id === 'w106')?.crossed).toBe(false);
   });
 });
 
