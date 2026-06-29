@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { calcTedori, calcSocialInsurance } from './tax.ts';
+import { calcTedori, calcSocialInsurance, calcBonus, RATES } from './tax.ts';
 import { calcLoan } from './loan.ts';
 import { calcInvest } from './invest.ts';
 import { calcTaishoku, retirementDeduction } from './taishoku.ts';
@@ -153,5 +153,45 @@ describe('時給→年収 fromHourly（厳密値）', () => {
     expect(r.daily).toBe(9_600);
     expect(r.monthly).toBe(192_000);
     expect(r.annual).toBe(2_304_000);
+  });
+});
+
+describe('ボーナス手取り calcBonus', () => {
+  const cases: [number, number][] = [
+    [300_000, 250_000],
+    [500_000, 300_000],
+    [1_000_000, 400_000],
+    [2_000_000, 600_000],
+  ];
+
+  it('普遍的な不変条件', () => {
+    for (const [bonus, monthly] of cases) {
+      const r = calcBonus({ bonus, monthlySalary: monthly, age40OrOver: false, hasSpouse: false, dependents: 0 });
+      expect(r.takeHome).toBeLessThanOrEqual(bonus); // 手取りは額面以下
+      expect(r.takeHome).toBeGreaterThan(0);
+      expect(r.health).toBeGreaterThanOrEqual(0);
+      expect(r.pension).toBeGreaterThanOrEqual(0);
+      expect(r.employment).toBeGreaterThanOrEqual(0);
+      expect(r.incomeTax).toBeGreaterThanOrEqual(0);
+      // 賞与は住民税が引かれないので率は給与手取りより高め（概ね70〜95%）
+      expect(r.takeHomeRate).toBeGreaterThan(0.6);
+      expect(r.takeHomeRate).toBeLessThanOrEqual(1);
+      // 内訳の整合
+      expect(r.socialInsuranceTotal).toBe(r.health + r.pension + r.employment);
+      expect(r.totalDeductions).toBe(r.socialInsuranceTotal + r.incomeTax);
+      expect(r.takeHome).toBe(bonus - r.totalDeductions);
+    }
+  });
+
+  it('40歳以上は介護ぶん社会保険料が増える', () => {
+    const u = calcBonus({ bonus: 500_000, monthlySalary: 300_000, age40OrOver: false, hasSpouse: false, dependents: 0 });
+    const o = calcBonus({ bonus: 500_000, monthlySalary: 300_000, age40OrOver: true, hasSpouse: false, dependents: 0 });
+    expect(o.socialInsuranceTotal).toBeGreaterThan(u.socialInsuranceTotal);
+  });
+
+  it('厚生年金は1回の賞与150万円が上限', () => {
+    // 標準賞与額200万でも厚年は150万ベースで頭打ち
+    const r = calcBonus({ bonus: 2_000_000, monthlySalary: 500_000, age40OrOver: false, hasSpouse: false, dependents: 0 });
+    expect(r.pension).toBe(Math.floor((1_500_000 * RATES.pension) / 2));
   });
 });
