@@ -36,6 +36,9 @@ jobs:
       - name: 計算エンジンのユニットテスト（誤計算を自動ブロック＝フルオートの安全弁）
         run: npm test
 
+      - name: 型チェック（astro check・型エラーを弾く）
+        run: npm run check
+
       - name: Build (静的サイト生成が成功すること)
         run: npm run build
 

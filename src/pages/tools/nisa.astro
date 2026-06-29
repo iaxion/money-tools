@@ -164,7 +164,7 @@ const jsonLd = [
     $('r-saved').textContent = '+' + yen(r.taxIfTaxable) + ' お得';
 
     const rows = yearlySeries(input)
-      .filter((s, i, a) => s.year % 5 === 0 || s.year === a.length || s.year === 1)
+      .filter((s, _i, a) => s.year % 5 === 0 || s.year === a.length || s.year === 1)
       .map(
         (s) =>
           `<tr><td>${s.year}年目</td><td class="num muted">${yen(s.principal)}</td><td class="num">${yen(s.value)}</td></tr>`,
