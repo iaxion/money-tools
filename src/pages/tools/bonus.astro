@@ -1,0 +1,255 @@
+---
+import Base from '../../layouts/Base.astro';
+import Freshness from '../../components/Freshness.astro';
+import { SITE } from '../../config.ts';
+import { calcBonus } from '../../lib/tax.ts';
+
+const path = '/tools/bonus';
+const title = 'ボーナスの手取り計算（2026年・令和8年対応）';
+const description =
+  '賞与（ボーナス）の額面から手取りと健康保険・厚生年金・雇用保険・所得税の控除額を概算。2026年(令和8年)の最新税率に対応した無料シミュレーター。';
+
+/** ボーナス別早見表（月給35万・独身・扶養なし・40歳未満） */
+const HAYAMI_BONUSES = [100, 200, 300, 400, 500, 600, 700, 800, 1000, 1200, 1500];
+const hayami = HAYAMI_BONUSES.map((man) => {
+  const r = calcBonus({
+    bonus: man * 10_000,
+    monthlySalary: 350_000,
+    age40OrOver: false,
+    hasSpouse: false,
+    dependents: 0,
+  });
+  return {
+    bonus: man,
+    takeHome: Math.round(r.takeHome / 10_000),
+    rate: Math.round(r.takeHomeRate * 1000) / 10,
+    si: Math.round(r.socialInsuranceTotal / 10_000 * 10) / 10,
+    tax: Math.round(r.incomeTax / 10_000 * 10) / 10,
+  };
+});
+
+const faqs = [
+  {
+    q: 'ボーナスの手取りはどうやって計算されますか？',
+    a: '賞与の額面から、社会保険料（健康保険・厚生年金・雇用保険、40歳以上は介護保険）と所得税を差し引いた金額が手取りです。住民税はボーナスから直接天引きされず、翌年の住民税（給与からの特別徴収）に反映されます。本ツールは2026年(令和8年)の税率・料率で概算します。',
+  },
+  {
+    q: '厚生年金は賞与上限があると聞きましたが？',
+    a: 'はい。厚生年金の標準賞与額は1回の支払いにつき上限150万円です。本ツールはこの上限を反映しています。健康保険は年間の累計上限（573万円）がありますが、年1〜2回のボーナスであれば多くの場合上限には達しません。',
+  },
+  {
+    q: '所得税の計算はどのように行っていますか？',
+    a: '月給×12の年収と、月給×12＋賞与の年収でそれぞれ年間所得税を試算し、その差額を賞与の所得税として表示しています。公式の「賞与源泉徴収税額算出率の表」と近い結果になりますが、完全に一致するものではありません。概算としてご利用ください。',
+  },
+  {
+    q: '住民税はなぜ表示されないのですか？',
+    a: '住民税は賞与から直接源泉徴収されないためです。ボーナスを含む年収全体が翌年の住民税（所得割）の計算基礎となり、毎月の給与から12分割で天引きされます。',
+  },
+  {
+    q: '計算結果は実際の給与明細と一致しますか？',
+    a: '概算です。社会保険料は本来「標準報酬月額」の等級に基づきますが、本ツールでは月給に料率を直接適用しています。また所得税は月給に基づく年収差額で近似しており、実際の源泉徴収額とは数千円単位で差が出る場合があります。',
+  },
+];
+
+const jsonLd = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'ホーム', item: SITE.url + '/' },
+      { '@type': 'ListItem', position: 2, name: 'ボーナスの手取り計算', item: SITE.url + path + '/' },
+    ],
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: faqs.map((f) => ({
+      '@type': 'Question',
+      name: f.q,
+      acceptedAnswer: { '@type': 'Answer', text: f.a },
+    })),
+  },
+];
+---
+
+<Base title={title} description={description} path={path} jsonLd={jsonLd}>
+  <section class="hero" style="padding-bottom:6px;">
+    <h1>ボーナスの手取り計算</h1>
+    <p>賞与（ボーナス）の額面と月給を入力するだけで、社会保険料・所得税を引いた手取りを概算します。2026年(令和8年)対応。</p>
+  </section>
+
+  <div class="panel">
+    <form id="calc" autocomplete="off">
+      <div class="row">
+        <div class="field">
+          <label for="bonus">賞与（ボーナス）の額面<span class="hint"> ／ 円</span></label>
+          <input type="number" id="bonus" inputmode="numeric" min="0" step="10000" value="500000" />
+        </div>
+        <div class="field">
+          <label for="monthly">月給の額面<span class="hint"> ／ 円（所得税率の推定に使用）</span></label>
+          <input type="number" id="monthly" inputmode="numeric" min="0" step="10000" value="300000" />
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label for="age">年齢区分<span class="hint"> ／ 介護保険</span></label>
+          <select id="age">
+            <option value="0" selected>40歳未満</option>
+            <option value="1">40〜64歳（介護保険あり）</option>
+            <option value="0b">65歳以上</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="dependents">扶養親族（16歳以上）<span class="hint"> ／ 人</span></label>
+          <input type="number" id="dependents" inputmode="numeric" min="0" max="10" step="1" value="0" />
+        </div>
+      </div>
+
+      <div class="field">
+        <div class="checks">
+          <label><input type="checkbox" id="spouse" /> 配偶者控除の対象となる配偶者がいる</label>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <div id="result" class="panel" aria-live="polite">
+    <div class="result-hero">
+      <p class="label">手取りボーナス（概算）</p>
+      <p class="big" id="r-takehome">—</p>
+      <p class="sub">手取り率 <strong id="r-rate">—</strong></p>
+    </div>
+
+    <table class="breakdown">
+      <tbody>
+        <tr><td>賞与額面</td><td class="num" id="r-bonus">—</td></tr>
+        <tr><td class="sect" colspan="2">社会保険料（本人負担）</td></tr>
+        <tr><td class="muted">　健康保険<span id="r-care-label"></span></td><td class="num" id="r-health">—</td></tr>
+        <tr><td class="muted">　厚生年金（上限150万円）</td><td class="num" id="r-pension">—</td></tr>
+        <tr><td class="muted">　雇用保険</td><td class="num" id="r-employment">—</td></tr>
+        <tr><td class="sect" colspan="2">税金</td></tr>
+        <tr><td class="muted">　所得税（復興税込み）</td><td class="num" id="r-incometax">—</td></tr>
+        <tr><td class="muted" style="font-size:.85em;color:#888;">　住民税（賞与からは天引きなし）</td><td class="num muted" style="font-size:.85em;color:#888;">—</td></tr>
+        <tr><td>控除合計</td><td class="num" id="r-deductions">—</td></tr>
+        <tr class="total"><td>手取りボーナス</td><td class="num" id="r-takehome2">—</td></tr>
+      </tbody>
+    </table>
+
+    <div class="note">
+      <strong>概算についての注意：</strong>
+      社会保険料は協会けんぽ東京支部の2026年度料率（健康保険9.85%＋子ども・子育て支援金0.23%、介護1.62%、雇用0.5%）を使用。厚生年金は1回の賞与につき標準賞与額の上限150万円を反映。
+      所得税は「月給×12」と「月給×12＋賞与」の年間所得税差額で近似（公式源泉徴収率表との差は数千円程度）。
+      住民税はボーナスから直接天引きされないため非表示です（翌年の給与から特別徴収されます）。
+    </div>
+    <Freshness />
+  </div>
+
+  <section class="prose">
+    <h2>ボーナスの手取りとは？</h2>
+    <p>
+      賞与（ボーナス）の「手取り」は、額面から<strong>社会保険料</strong>と<strong>所得税（源泉徴収）</strong>を引いた金額です。
+      通常の月給とは異なる計算方法が適用されるため、額面に対する手取り率は月給とは異なる場合があります。
+    </p>
+
+    <h3>ボーナスから引かれるもの</h3>
+    <ul>
+      <li><strong>健康保険料</strong>：月給と同様、賞与の標準賞与額（1,000円未満切り捨て）に料率を適用。40歳以上は介護保険料も上乗せ。</li>
+      <li><strong>厚生年金保険料</strong>：標準賞与額に18.3%（本人負担9.15%）を適用。<strong>1回の賞与につき上限150万円</strong>（月給の上限65万円とは別）。</li>
+      <li><strong>雇用保険料</strong>：賞与額面に0.5%を適用。</li>
+      <li><strong>所得税（源泉徴収）</strong>：前月の月給をもとに算出した税率を、賞与の課税対象額（社保控除後）に適用。</li>
+      <li><strong>住民税</strong>：ボーナスから直接天引きされない。賞与を含む年収全体が翌年の住民税の計算基礎となり、月々の給与から12分割で徴収される。</li>
+    </ul>
+
+    <h3>ボーナスが高いほど税率が上がる？</h3>
+    <p>
+      所得税は累進課税なので、ボーナスが大きく年収が上がるほど適用される税率も上がります。
+      ただし厚生年金は<strong>1回150万円上限</strong>があるため、高額賞与になるほど手取り率が上がる面もあります。
+    </p>
+
+    <h2>よくある質問</h2>
+    {faqs.map((f) => (
+      <details>
+        <summary>{f.q}</summary>
+        <p>{f.a}</p>
+      </details>
+    ))}
+  </section>
+
+  <section class="prose">
+    <h2>ボーナス額別 手取り早見表（2026年・月給35万・独身・扶養なし）</h2>
+    <p>下表は月給35万円・独身・扶養なし・40歳未満・協会けんぽ東京の場合の概算です。月給や年齢・家族構成により変わります。</p>
+    <div style="overflow-x:auto;">
+      <table class="breakdown hayami-table">
+        <thead>
+          <tr>
+            <th>賞与額面</th>
+            <th>手取りボーナス</th>
+            <th>手取り率</th>
+            <th>社会保険料</th>
+            <th>所得税</th>
+          </tr>
+        </thead>
+        <tbody>
+          {hayami.map((row) => (
+            <tr>
+              <td class="num">{row.bonus}万円</td>
+              <td class="num">約{row.takeHome}万円</td>
+              <td class="num">{row.rate}%</td>
+              <td class="num">約{row.si}万円</td>
+              <td class="num">約{row.tax}万円</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="prose">
+    <h2>関連ツール</h2>
+    <ul>
+      <li><a href="/tools/tedori/">給与の手取り計算 — 年収（賞与込み）から年間手取りと税金内訳を概算</a></li>
+      <li><a href="/tools/furusato/">ふるさと納税 限度額 — 年収・家族構成から自己負担2,000円の上限額を計算</a></li>
+      <li><a href="/tools/taishoku/">退職金の手取り計算 — 退職所得控除と税額を概算</a></li>
+      <li><a href="/">← ほかの計算ツールを見る</a></li>
+    </ul>
+  </section>
+</Base>
+
+<script>
+  import { calcBonus, yen } from '../../lib/tax.ts';
+
+  const $ = (id: string) => document.getElementById(id) as HTMLElement;
+  const bonusEl = $('bonus') as HTMLInputElement;
+  const monthlyEl = $('monthly') as HTMLInputElement;
+  const ageEl = $('age') as HTMLSelectElement;
+  const dependentsEl = $('dependents') as HTMLInputElement;
+  const spouseEl = $('spouse') as HTMLInputElement;
+
+  function render() {
+    const r = calcBonus({
+      bonus: Number(bonusEl.value) || 0,
+      monthlySalary: Number(monthlyEl.value) || 0,
+      age40OrOver: ageEl.value === '1',
+      hasSpouse: spouseEl.checked,
+      dependents: Number(dependentsEl.value) || 0,
+    });
+
+    $('r-takehome').textContent = yen(r.takeHome);
+    $('r-takehome2').textContent = yen(r.takeHome);
+    $('r-rate').textContent = (r.takeHomeRate * 100).toFixed(1) + '%';
+    $('r-bonus').textContent = yen(r.bonus);
+    $('r-health').textContent = yen(r.health);
+    $('r-care-label').textContent = ageEl.value === '1' ? '（介護込み）' : '';
+    $('r-pension').textContent = yen(r.pension);
+    $('r-employment').textContent = yen(r.employment);
+    $('r-incometax').textContent = yen(r.incomeTax);
+    $('r-deductions').textContent = yen(r.totalDeductions);
+  }
+
+  for (const el of [bonusEl, monthlyEl, ageEl, dependentsEl, spouseEl]) {
+    el.addEventListener('input', render);
+    el.addEventListener('change', render);
+  }
+  render();
+</script>
