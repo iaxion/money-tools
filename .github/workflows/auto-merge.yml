@@ -15,6 +15,7 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  issues: write
 
 jobs:
   automerge:
@@ -58,3 +59,18 @@ jobs:
 
           echo "CI緑のため自動マージ(squash)します。"
           gh pr merge "$pr" --squash --delete-branch
+
+          # 紐付くIssueを確実にクローズする。
+          # GITHUB_TOKEN によるマージでは commit 内の "closes #N" が自動発火しないため明示的に閉じる。
+          # 番号は ブランチ auto/issue-<番号> → PR本文の close/fix/resolve #<番号> の順で拾う。
+          issue=$(printf '%s' "$HEAD_BRANCH" | grep -oE 'issue-[0-9]+' | grep -oE '[0-9]+' | head -1 || true)
+          if [ -z "${issue:-}" ]; then
+            issue=$(gh pr view "$pr" --json body --jq '.body // ""' \
+              | grep -oiE '(clos|fix|resolv)[a-z]*[[:space:]]+#[0-9]+' | grep -oE '[0-9]+' | head -1 || true)
+          fi
+          if [ -n "${issue:-}" ]; then
+            echo "紐付き Issue #$issue をクローズします。"
+            gh issue close "$issue" --comment "対応PR #$pr がマージされたため自動クローズしました。" || true
+          else
+            echo "紐付き Issue は検出されませんでした（クローズなし）。"
+          fi
