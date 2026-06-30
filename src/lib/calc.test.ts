@@ -7,6 +7,7 @@ import { calcFurusato } from './furusato.ts';
 import { fromHourly } from './convert.ts';
 import { calcKabe } from './kabe.ts';
 import { calcKogaku, KOGAKU_BRACKETS } from './kogaku.ts';
+import { calcShitsugyo, calcDailyBenefit } from './shitsugyo.ts';
 
 /**
  * 計算エンジンの安全弁テスト（フルオート運用の品質ゲート）。
@@ -300,5 +301,73 @@ describe('ボーナス手取り calcBonus', () => {
     // 標準賞与額200万でも厚年は150万ベースで頭打ち
     const r = calcBonus({ bonus: 2_000_000, monthlySalary: 500_000, age40OrOver: false, hasSpouse: false, dependents: 0 });
     expect(r.pension).toBe(Math.floor((1_500_000 * RATES.pension) / 2));
+  });
+});
+
+describe('失業給付 calcShitsugyo', () => {
+  it('不変条件: 日額は上限以下・下限以上、給付日数は正、総額は正', () => {
+    const cases: [number, number, '自己都合' | '会社都合', number][] = [
+      [200_000, 28, '自己都合', 3],
+      [300_000, 40, '会社都合', 8],
+      [500_000, 52, '会社都合', 15],
+      [250_000, 62, '自己都合', 25],
+    ];
+    for (const [monthly, age, reason, years] of cases) {
+      const r = calcShitsugyo({ monthlyWage6mAvg: monthly, age, reason, insuredYears: years });
+      expect(r.dailyBenefit).toBeGreaterThanOrEqual(2_411);         // 令和7年下限
+      expect(r.dailyBenefit).toBeLessThanOrEqual(8_870);            // 最高上限
+      expect(r.totalDays).toBeGreaterThan(0);
+      expect(r.totalEstimate).toBeGreaterThan(0);
+      expect(r.totalEstimate).toBe(r.dailyBenefit * r.totalDays);
+      expect(r.dailyWage).toBeGreaterThan(0);
+    }
+  });
+
+  it('会社都合 ≥ 自己都合の給付日数（同条件）', () => {
+    const base = { monthlyWage6mAvg: 300_000, age: 40, insuredYears: 8 };
+    const vol = calcShitsugyo({ ...base, reason: '自己都合' });
+    const inv = calcShitsugyo({ ...base, reason: '会社都合' });
+    expect(inv.totalDays).toBeGreaterThanOrEqual(vol.totalDays);
+  });
+
+  it('自己都合の給付制限は1ヶ月、会社都合は0ヶ月', () => {
+    const vol = calcShitsugyo({ monthlyWage6mAvg: 300_000, age: 35, reason: '自己都合', insuredYears: 5 });
+    const inv = calcShitsugyo({ monthlyWage6mAvg: 300_000, age: 35, reason: '会社都合', insuredYears: 5 });
+    expect(vol.benefitRestrictionMonths).toBe(1);
+    expect(inv.benefitRestrictionMonths).toBe(0);
+  });
+
+  it('賃金日額 = 月給平均 × 6 ÷ 180', () => {
+    const r = calcShitsugyo({ monthlyWage6mAvg: 300_000, age: 35, reason: '自己都合', insuredYears: 5 });
+    expect(r.dailyWage).toBe(Math.round(300_000 * 6 / 180)); // = 10,000円
+  });
+
+  it('月給平均10万（低賃金）: 日額は下限(2,411)以上80%以下', () => {
+    const r = calcShitsugyo({ monthlyWage6mAvg: 100_000, age: 30, reason: '自己都合', insuredYears: 3 });
+    const wage = Math.round(100_000 * 6 / 180);
+    expect(r.dailyBenefit).toBeGreaterThanOrEqual(2_411);
+    expect(r.dailyBenefit).toBeLessThanOrEqual(Math.ceil(wage * 0.8));
+  });
+
+  it('月給平均30万（中程度）: 日額は上限を超えない', () => {
+    const r = calcShitsugyo({ monthlyWage6mAvg: 300_000, age: 40, reason: '自己都合', insuredYears: 12 });
+    expect(r.dailyBenefit).toBeLessThanOrEqual(8_055); // 30〜44歳の上限
+  });
+
+  it('自己都合・被保険者10年以上で給付日数が増える', () => {
+    const r9  = calcShitsugyo({ monthlyWage6mAvg: 300_000, age: 35, reason: '自己都合', insuredYears: 9 });
+    const r10 = calcShitsugyo({ monthlyWage6mAvg: 300_000, age: 35, reason: '自己都合', insuredYears: 10 });
+    const r20 = calcShitsugyo({ monthlyWage6mAvg: 300_000, age: 35, reason: '自己都合', insuredYears: 20 });
+    expect(r9.totalDays).toBe(90);
+    expect(r10.totalDays).toBe(120);
+    expect(r20.totalDays).toBe(150);
+  });
+
+  it('基本手当日額の上限: 令和7年8月1日以降の公式値', () => {
+    // 高月給で各年齢区分の上限に張り付くことを確認
+    expect(calcDailyBenefit(100_000, 25)).toBe(7_255);  // 29歳以下
+    expect(calcDailyBenefit(100_000, 40)).toBe(8_055);  // 30〜44歳
+    expect(calcDailyBenefit(100_000, 55)).toBe(8_870);  // 45〜59歳
+    expect(calcDailyBenefit(100_000, 62)).toBe(7_623);  // 60〜64歳
   });
 });
