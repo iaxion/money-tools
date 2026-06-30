@@ -1,6 +1,7 @@
 ---
 import Base from '../../layouts/Base.astro';
 import Freshness from '../../components/Freshness.astro';
+import RelatedTools from '../../components/RelatedTools.astro';
 import { SITE } from '../../config.ts';
 import { calcKabe } from '../../lib/kabe.ts';
 
@@ -131,16 +132,12 @@ const jsonLd = [
     ))}
   </section>
 
-  <section class="prose">
-    <h2>関連ツール</h2>
-    <ul>
-      <li><a href="/tools/tedori/">給与の手取り計算</a> — 年収から手取りと税金の内訳を概算</li>
-      <li><a href="/tools/furusato/">ふるさと納税 限度額シミュレーター</a> — 年収別の控除上限を計算</li>
-      <li><a href="/tools/bonus/">ボーナスの手取り計算</a> — 賞与の手取りを概算</li>
-    </ul>
-  </section>
-
-  <p style="margin-top:24px;"><a href="/">← ほかの計算ツールを見る</a></p>
+  <RelatedTools tools={[
+    { href: '/tools/tedori/', name: '給与の手取り計算', desc: '年収から手取りと税金の内訳を概算' },
+    { href: '/tools/furusato/', name: 'ふるさと納税 限度額', desc: '年収・家族構成から控除上限を計算' },
+    { href: '/tools/bonus/', name: 'ボーナスの手取り計算', desc: '賞与の手取りと税金内訳を概算' },
+    { href: '/tools/taishoku/', name: '退職金の手取り計算', desc: '退職所得控除と税額を概算' },
+  ]} />
 </Base>
 
 <script>

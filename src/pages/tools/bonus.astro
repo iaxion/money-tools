@@ -1,6 +1,7 @@
 ---
 import Base from '../../layouts/Base.astro';
 import Freshness from '../../components/Freshness.astro';
+import RelatedTools from '../../components/RelatedTools.astro';
 import { SITE } from '../../config.ts';
 import { calcBonus } from '../../lib/tax.ts';
 
@@ -205,15 +206,12 @@ const jsonLd = [
     </div>
   </section>
 
-  <section class="prose">
-    <h2>関連ツール</h2>
-    <ul>
-      <li><a href="/tools/tedori/">給与の手取り計算 — 年収（賞与込み）から年間手取りと税金内訳を概算</a></li>
-      <li><a href="/tools/furusato/">ふるさと納税 限度額 — 年収・家族構成から自己負担2,000円の上限額を計算</a></li>
-      <li><a href="/tools/taishoku/">退職金の手取り計算 — 退職所得控除と税額を概算</a></li>
-      <li><a href="/">← ほかの計算ツールを見る</a></li>
-    </ul>
-  </section>
+  <RelatedTools tools={[
+    { href: '/tools/tedori/', name: '給与の手取り計算', desc: '年収（賞与込み）から年間手取りと税金内訳を概算' },
+    { href: '/tools/taishoku/', name: '退職金の手取り計算', desc: '退職所得控除と税額を概算' },
+    { href: '/tools/kanzan/', name: '年収・月収・時給 換算', desc: '時給・日給・月給・年収を相互換算' },
+    { href: '/tools/furusato/', name: 'ふるさと納税 限度額', desc: '年収・家族構成から自己負担2,000円の上限額を計算' },
+  ]} />
 </Base>
 
 <script>

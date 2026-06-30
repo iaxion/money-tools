@@ -1,6 +1,7 @@
 ---
 import Base from '../../layouts/Base.astro';
 import Freshness from '../../components/Freshness.astro';
+import RelatedTools from '../../components/RelatedTools.astro';
 import { SITE } from '../../config.ts';
 import { calcTedori } from '../../lib/tax.ts';
 
@@ -188,7 +189,13 @@ const jsonLd = [
     </div>
   </section>
 
-  <p style="margin-top:24px;"><a href="/">← ほかの計算ツールを見る</a></p>
+  <RelatedTools tools={[
+    { href: '/tools/bonus/', name: 'ボーナスの手取り計算', desc: '賞与の手取りと税金内訳を概算' },
+    { href: '/tools/taishoku/', name: '退職金の手取り計算', desc: '退職所得控除と税額を概算' },
+    { href: '/tools/furusato/', name: 'ふるさと納税 限度額', desc: '年収・家族構成から自己負担2,000円の上限額を計算' },
+    { href: '/tools/kanzan/', name: '年収・月収・時給 換算', desc: '時給・日給・月給・年収を相互換算' },
+    { href: '/tools/kabe/', name: '年収の壁シミュレーター', desc: '103/106/130/150万円の壁を判定' },
+  ]} />
 </Base>
 
 <script>
