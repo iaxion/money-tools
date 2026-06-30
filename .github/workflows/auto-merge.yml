@@ -28,9 +28,6 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: 対象PRと変更ファイルを判定して自動マージ / 承認待ち化
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
         run: |
           set -euo pipefail
 
@@ -74,3 +71,15 @@ jobs:
           else
             echo "紐付き Issue は検出されませんでした（クローズなし）。"
           fi
+
+          # マージ成功をSlack通知
+          if [ -n "${SLACK_WEBHOOK_URL:-}" ]; then
+            pr_title=$(gh pr view "$pr" --json title --jq '.title' 2>/dev/null || echo "PR #$pr")
+            curl -s -X POST "$SLACK_WEBHOOK_URL" \
+              -H 'Content-Type: application/json' \
+              -d "{\"text\":\"✅ 自動マージ完了: ${pr_title}\nhttps://github.com/${{ github.repository }}/pull/$pr\"}"
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

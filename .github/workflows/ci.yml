@@ -45,3 +45,14 @@ jobs:
       - name: 鮮度チェック（制度データの見直し期限）
         # 見直し期限を過ぎていれば警告（ビルドは失敗させない＝デプロイは止めない）。
         run: node scripts/check-freshness.mjs || true
+
+      - name: Slack通知（CI失敗時のみ）
+        if: failure() && secrets.SLACK_WEBHOOK_URL != ''
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          BRANCH: ${{ github.ref_name }}
+        run: |
+          curl -s -X POST "$SLACK_WEBHOOK_URL" \
+            -H 'Content-Type: application/json' \
+            -d "{\"text\":\"❌ CI失敗: \`$BRANCH\` — ビルドまたはテストが壊れています。自動マージは止まっています。\n$RUN_URL\"}"
