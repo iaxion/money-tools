@@ -2,6 +2,7 @@
 import Base from '../../layouts/Base.astro';
 import Freshness from '../../components/Freshness.astro';
 import AffiliateCTA from '../../components/AffiliateCTA.astro';
+import RelatedTools from '../../components/RelatedTools.astro';
 import { SITE, AFFILIATES } from '../../config.ts';
 
 const path = '/tools/furusato';
@@ -132,7 +133,12 @@ const jsonLd = [
     ))}
   </section>
 
-  <p style="margin-top:24px;"><a href="/">← ほかの計算ツールを見る</a></p>
+  <RelatedTools tools={[
+    { href: '/tools/tedori/', name: '給与の手取り計算', desc: '年収から手取りと税金の内訳を概算' },
+    { href: '/tools/kabe/', name: '年収の壁シミュレーター', desc: '103/106/130/150/178万円の壁を判定' },
+    { href: '/tools/nisa/', name: 'NISA積立シミュレーター', desc: '将来の資産額と運用益を複利で試算' },
+    { href: '/tools/bonus/', name: 'ボーナスの手取り計算', desc: '賞与の手取りと社会保険・税金を概算' },
+  ]} />
 </Base>
 
 <script>

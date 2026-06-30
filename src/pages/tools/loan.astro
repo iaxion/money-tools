@@ -1,5 +1,6 @@
 ---
 import Base from '../../layouts/Base.astro';
+import RelatedTools from '../../components/RelatedTools.astro';
 import { SITE } from '../../config.ts';
 
 const path = '/tools/loan';
@@ -117,7 +118,11 @@ const jsonLd = [
     ))}
   </section>
 
-  <p style="margin-top:24px;"><a href="/">← ほかの計算ツールを見る</a></p>
+  <RelatedTools tools={[
+    { href: '/tools/nisa/', name: 'NISA積立シミュレーター', desc: '将来の資産額と運用益を複利で試算' },
+    { href: '/tools/tedori/', name: '給与の手取り計算', desc: '年収から手取りと税金の内訳を概算' },
+    { href: '/tools/furusato/', name: 'ふるさと納税 限度額', desc: '年収から自己負担2,000円の上限額を計算' },
+  ]} />
 </Base>
 
 <script>

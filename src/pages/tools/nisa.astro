@@ -1,6 +1,7 @@
 ---
 import Base from '../../layouts/Base.astro';
 import AffiliateCTA from '../../components/AffiliateCTA.astro';
+import RelatedTools from '../../components/RelatedTools.astro';
 import { SITE, AFFILIATES } from '../../config.ts';
 
 const path = '/tools/nisa';
@@ -134,7 +135,12 @@ const jsonLd = [
     ))}
   </section>
 
-  <p style="margin-top:24px;"><a href="/">← ほかの計算ツールを見る</a></p>
+  <RelatedTools tools={[
+    { href: '/tools/furusato/', name: 'ふるさと納税 限度額', desc: '年収から自己負担2,000円の上限額を計算' },
+    { href: '/tools/tedori/', name: '給与の手取り計算', desc: '年収から手取りと税金の内訳を概算' },
+    { href: '/tools/loan/', name: '住宅ローン返済シミュレーター', desc: '毎月の返済額・総返済額・利息を計算' },
+    { href: '/tools/kabe/', name: '年収の壁シミュレーター', desc: '103/106/130/178万円の壁を即判定' },
+  ]} />
 </Base>
 
 <script>

@@ -1,0 +1,16 @@
+---
+export interface Props {
+  tools: Array<{ href: string; name: string; desc: string }>;
+}
+const { tools } = Astro.props;
+---
+
+<section class="prose" style="margin-top:32px;">
+  <h2>関連ツール</h2>
+  <ul>
+    {tools.map((t) => (
+      <li><a href={t.href}>{t.name}</a> — {t.desc}</li>
+    ))}
+    <li><a href="/">← すべての計算ツールを見る</a></li>
+  </ul>
+</section>
