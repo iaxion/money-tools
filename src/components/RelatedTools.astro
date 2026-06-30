@@ -5,12 +5,17 @@ export interface Props {
 const { tools } = Astro.props;
 ---
 
-<section class="prose" style="margin-top:32px;">
-  <h2>関連ツール</h2>
-  <ul>
+<section style="margin-top:36px;">
+  <h2 style="font-size:1.25rem; margin:0 0 12px;">関連ツール</h2>
+  <div class="grid">
     {tools.map((t) => (
-      <li><a href={t.href}>{t.name}</a> — {t.desc}</li>
+      <a class="card" href={t.href}>
+        <h3>{t.name}</h3>
+        <p>{t.desc}</p>
+      </a>
     ))}
-    <li><a href="/">← すべての計算ツールを見る</a></li>
-  </ul>
+  </div>
+  <p style="margin-top:10px; font-size:.9rem;">
+    <a href="/">← すべての計算ツール一覧</a>
+  </p>
 </section>
