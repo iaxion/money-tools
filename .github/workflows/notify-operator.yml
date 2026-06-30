@@ -1,0 +1,28 @@
+name: Notify Operator
+
+# `needs-operator` ラベルが Issue に付いたとき Slack で運営者に判断を仰ぐ。
+# 自律エージェント（戦略家/クリティック/ビルダー）が「人間の判断が要る」と判定したとき
+# このラベルを付けるだけで、自動的に運営者へ通知が届く。
+
+on:
+  issues:
+    types: [labeled]
+
+jobs:
+  notify:
+    if: github.event.label.name == 'needs-operator'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Slack通知（運営者の判断が必要）
+        if: ${{ secrets.SLACK_WEBHOOK_URL != '' }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_URL: ${{ github.event.issue.html_url }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+        run: |
+          # 本文の最初の200文字だけ抜粋
+          snippet=$(echo "$ISSUE_BODY" | head -c 200 | tr '\n' ' ')
+          curl -s -X POST "$SLACK_WEBHOOK_URL" \
+            -H 'Content-Type: application/json' \
+            -d "{\"text\":\"🤖 *AIから判断を求めています*\n*$ISSUE_TITLE*\n$snippet...\n\n👉 $ISSUE_URL\"}"
