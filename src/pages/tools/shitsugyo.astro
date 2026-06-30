@@ -1,0 +1,242 @@
+---
+import Base from '../../layouts/Base.astro';
+import Freshness from '../../components/Freshness.astro';
+import RelatedTools from '../../components/RelatedTools.astro';
+import { SITE } from '../../config.ts';
+
+const path = '/tools/shitsugyo';
+const title = '失業給付（基本手当）シミュレーター（2025年・令和7年対応）';
+const description =
+  '離職前の月給・年齢・被保険者期間・離職理由を入力するだけで、雇用保険の基本手当（失業手当）の日額・給付日数・受給総額の目安を概算。令和7年8月改定の公式計算式対応。';
+
+const faqs = [
+  {
+    q: '失業給付（基本手当）はいくらもらえますか？',
+    a: '基本手当日額は「賃金日額（離職前6ヶ月の月給平均 × 6 ÷ 180）× 給付率（45〜80%）」で計算します。令和7年8月以降の上限は年齢によって異なり、29歳以下7,255円・30〜44歳8,055円・45〜59歳8,870円・60〜64歳7,623円です。このシミュレーターに数値を入れると目安を計算できます。',
+  },
+  {
+    q: '自己都合退職と会社都合退職で何が違いますか？',
+    a: '主に2点違います。①給付制限：自己都合退職は令和7年4月以降の離職で原則1ヶ月の給付制限（待機期間7日＋給付制限1ヶ月後から支給）があります。会社都合（特定受給資格者）は給付制限がなく7日後から支給されます。②所定給付日数：会社都合の方が年齢・被保険者期間によっては給付日数が多くなります。',
+  },
+  {
+    q: '被保険者期間とは何ですか？',
+    a: '雇用保険に加入していた期間の合計年数です。前の会社での被保険者期間も一定条件下で通算されます。ただし、受給を受けてリセットされた後は通算されません。正確な期間は離職票や雇用保険被保険者証でご確認ください。',
+  },
+  {
+    q: '基本手当は課税されますか？',
+    a: 'いいえ。基本手当（失業給付）は非課税です。所得税・住民税の計算上、所得には含まれません。',
+  },
+  {
+    q: '計算結果は正確ですか？',
+    a: '概算です。実際の支給額はハローワークでの手続きと認定が必要で、離職票の記載内容・賃金の算定方法・特定受給資格者の要件等により変わります。正確な金額はハローワーク（公共職業安定所）にご相談ください。',
+  },
+];
+
+const jsonLd = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'ホーム', item: SITE.url + '/' },
+      { '@type': 'ListItem', position: 2, name: '失業給付シミュレーター', item: SITE.url + path + '/' },
+    ],
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: faqs.map((f) => ({
+      '@type': 'Question',
+      name: f.q,
+      acceptedAnswer: { '@type': 'Answer', text: f.a },
+    })),
+  },
+];
+---
+
+<Base title={title} description={description} path={path} jsonLd={jsonLd}>
+  <section class="hero" style="padding-bottom:6px;">
+    <h1>失業給付（基本手当）シミュレーター</h1>
+    <p>離職前の月給・年齢・被保険者期間・離職理由を入力して、雇用保険の基本手当（失業手当）の日額・給付日数・受給総額の目安を計算します。</p>
+  </section>
+
+  <div class="panel">
+    <form id="calc" autocomplete="off">
+      <div class="field">
+        <label for="monthly">離職前6ヶ月の月給平均（総支給額）<span class="hint"> ／ 円</span></label>
+        <input type="number" id="monthly" inputmode="numeric" min="0" step="10000" value="300000" />
+        <p style="margin:.4em 0 0; font-size:.85em; color:#6b7488;">賞与を除いた月の総支給額の平均。「賃金日額 = 月給平均 × 6 ÷ 180」で計算します。</p>
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label for="age">離職時の年齢<span class="hint"> ／ 歳</span></label>
+          <input type="number" id="age" inputmode="numeric" min="15" max="64" step="1" value="35" />
+        </div>
+        <div class="field">
+          <label for="years">被保険者期間<span class="hint"> ／ 年</span></label>
+          <input type="number" id="years" inputmode="numeric" min="0" max="50" step="1" value="5" />
+          <p style="margin:.3em 0 0; font-size:.85em; color:#6b7488;">1年未満の場合は 0 と入力</p>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="reason">離職理由</label>
+        <select id="reason">
+          <option value="自己都合">自己都合退職</option>
+          <option value="会社都合">会社都合・特定受給資格者（倒産・解雇等）</option>
+        </select>
+      </div>
+    </form>
+  </div>
+
+  <div id="result" class="panel" aria-live="polite">
+    <div class="result-hero">
+      <p class="label">受給総額の目安（概算）</p>
+      <p class="big" id="r-total">—</p>
+      <p class="sub">基本手当日額 <strong id="r-daily">—</strong>　×　所定給付日数 <strong id="r-days">—</strong>日</p>
+    </div>
+
+    <table class="breakdown">
+      <tbody>
+        <tr><td>賃金日額（月給平均 × 6 ÷ 180）</td><td class="num" id="r-wage">—</td></tr>
+        <tr><td>基本手当日額</td><td class="num" id="r-daily2">—</td></tr>
+        <tr><td>給付率（概算）</td><td class="num" id="r-rate">—</td></tr>
+        <tr><td>所定給付日数</td><td class="num" id="r-days2">—</td></tr>
+        <tr class="total"><td>受給総額の目安</td><td class="num" id="r-total2">—</td></tr>
+      </tbody>
+    </table>
+
+    <div id="restriction-note" class="panel" style="margin:.8em 0 0; background:#fffbeb; border-left:4px solid #f59e0b; display:none;">
+      <p style="margin:0; font-size:.93em;">
+        <strong>給付制限について：</strong>
+        自己都合退職の場合、令和7年4月1日以降の離職は原則<strong>7日（待機）＋1か月の給付制限</strong>の後、支給が始まります。
+        教育訓練等を受講する場合は給付制限が解除されます。5年以内に2回以上の自己都合退職がある場合は3か月となります。
+      </p>
+    </div>
+
+    <div class="note">
+      <strong>概算についての注意：</strong>
+      本ツールは厚生労働省公表の令和7年8月1日以降の計算式と公式テーブルに基づき概算します。
+      実際の支給額はハローワークでの手続きと受給資格の認定が必要で、
+      離職票の記載内容・特定受給資格者の要件・待機期間・認定日等により異なります。
+      あくまで目安としてご利用ください。正確な金額・手続きはお近くのハローワーク（公共職業安定所）にご相談ください。
+    </div>
+    <Freshness />
+  </div>
+
+  <section class="prose">
+    <h2>基本手当（失業給付）のしくみ</h2>
+    <p>
+      雇用保険の基本手当（いわゆる「失業手当」）は、失業中の生活を支える給付です。
+      支給額（基本手当日額）は<strong>離職前6か月の賃金日額に給付率をかけた額</strong>で計算され、
+      賃金日額が低いほど給付率が高く（最大80%）、高いほど低く（最低45〜50%）なる逓減構造になっています。
+    </p>
+
+    <h3>基本手当日額の上限額（令和7年8月1日〜）</h3>
+    <div style="overflow-x:auto;">
+      <table class="breakdown">
+        <thead>
+          <tr><th>年齢</th><th>基本手当日額の上限</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>29歳以下</td><td class="num">7,255円</td></tr>
+          <tr><td>30〜44歳</td><td class="num">8,055円</td></tr>
+          <tr><td>45〜59歳</td><td class="num">8,870円</td></tr>
+          <tr><td>60〜64歳</td><td class="num">7,623円</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="font-size:.88em; color:#6b7488;">
+      下限額は2,411円（全年齢共通）。上限額・下限額は毎年8月1日に改定されます。<br>
+      出典: 厚生労働省「令和7年8月1日からの基本手当日額等の適用について」
+    </p>
+
+    <h3>所定給付日数</h3>
+    <p>給付を受けられる日数は、離職理由・年齢・被保険者期間によって決まります。</p>
+    <p><strong>自己都合退職（一般の受給資格者）</strong>：年齢不問</p>
+    <div style="overflow-x:auto;">
+      <table class="breakdown">
+        <thead><tr><th>被保険者期間</th><th>給付日数</th></tr></thead>
+        <tbody>
+          <tr><td>10年未満</td><td class="num">90日</td></tr>
+          <tr><td>10〜20年未満</td><td class="num">120日</td></tr>
+          <tr><td>20年以上</td><td class="num">150日</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p><strong>会社都合・特定受給資格者</strong>（倒産・解雇等）</p>
+    <div style="overflow-x:auto;">
+      <table class="breakdown">
+        <thead>
+          <tr><th>年齢</th><th>1年未満</th><th>1〜5年</th><th>5〜10年</th><th>10〜20年</th><th>20年以上</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>30歳未満</td><td class="num">90日</td><td class="num">90日</td><td class="num">120日</td><td class="num">180日</td><td class="num">—</td></tr>
+          <tr><td>30〜34歳</td><td class="num">90日</td><td class="num">90日</td><td class="num">180日</td><td class="num">210日</td><td class="num">240日</td></tr>
+          <tr><td>35〜44歳</td><td class="num">90日</td><td class="num">90日</td><td class="num">180日</td><td class="num">240日</td><td class="num">270日</td></tr>
+          <tr><td>45〜59歳</td><td class="num">90日</td><td class="num">180日</td><td class="num">240日</td><td class="num">270日</td><td class="num">330日</td></tr>
+          <tr><td>60〜64歳</td><td class="num">90日</td><td class="num">150日</td><td class="num">180日</td><td class="num">210日</td><td class="num">240日</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="font-size:.88em; color:#6b7488;">出典: ハローワーク「基本手当の所定給付日数」</p>
+
+    <h2>よくある質問</h2>
+    {faqs.map((f) => (
+      <details>
+        <summary>{f.q}</summary>
+        <p>{f.a}</p>
+      </details>
+    ))}
+  </section>
+
+  <RelatedTools tools={[
+    { href: '/tools/taishoku/', name: '退職金の手取り計算', desc: '退職所得控除と税額を概算。退職を考える方に' },
+    { href: '/tools/tedori/', name: '給与の手取り計算', desc: '額面年収から手取りと税金・社会保険料の内訳を概算' },
+    { href: '/tools/kabe/', name: '年収の壁シミュレーター', desc: '106/130/178万円の壁を判定。パート・扶養の方に' },
+    { href: '/tools/kogaku/', name: '高額療養費シミュレーター', desc: '1か月の医療費から自己負担上限額と払い戻し見込みを計算' },
+    { href: '/tools/furusato/', name: 'ふるさと納税 限度額', desc: '年収・家族構成から控除上限額を計算' },
+  ]} />
+</Base>
+
+<script>
+  import { calcShitsugyo } from '../../lib/shitsugyo.ts';
+
+  const $ = (id: string) => document.getElementById(id) as HTMLElement;
+  const monthly = $('monthly') as HTMLInputElement;
+  const age = $('age') as HTMLInputElement;
+  const years = $('years') as HTMLInputElement;
+  const reason = $('reason') as HTMLSelectElement;
+
+  function yen(n: number): string {
+    return n.toLocaleString('ja-JP') + '円';
+  }
+
+  function render() {
+    const r = calcShitsugyo({
+      monthlyWage6mAvg: Number(monthly.value) || 0,
+      age: Number(age.value) || 30,
+      reason: reason.value as '自己都合' | '会社都合',
+      insuredYears: Number(years.value) || 0,
+    });
+
+    $('r-total').textContent = yen(r.totalEstimate);
+    $('r-daily').textContent = yen(r.dailyBenefit);
+    $('r-days').textContent = String(r.totalDays);
+
+    $('r-wage').textContent = yen(r.dailyWage);
+    $('r-daily2').textContent = yen(r.dailyBenefit);
+    $('r-rate').textContent = (r.benefitRate * 100).toFixed(1) + '%';
+    $('r-days2').textContent = r.totalDays + '日';
+    $('r-total2').textContent = yen(r.totalEstimate);
+
+    const note = $('restriction-note');
+    note.style.display = r.benefitRestrictionMonths > 0 ? '' : 'none';
+  }
+
+  for (const el of [monthly, age, years, reason]) {
+    el.addEventListener('input', render);
+    el.addEventListener('change', render);
+  }
+  render();
+</script>
