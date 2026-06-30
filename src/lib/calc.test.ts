@@ -6,6 +6,7 @@ import { calcTaishoku, retirementDeduction } from './taishoku.ts';
 import { calcFurusato } from './furusato.ts';
 import { fromHourly } from './convert.ts';
 import { calcKabe } from './kabe.ts';
+import { calcKogaku, KOGAKU_BRACKETS } from './kogaku.ts';
 
 /**
  * 計算エンジンの安全弁テスト（フルオート運用の品質ゲート）。
@@ -197,6 +198,68 @@ describe('年収の壁 calcKabe', () => {
   it('ちょうど106万円の境界: 超過判定', () => {
     expect(calcKabe(1_060_000).walls.find((w) => w.id === 'w106')?.crossed).toBe(true);
     expect(calcKabe(1_059_999).walls.find((w) => w.id === 'w106')?.crossed).toBe(false);
+  });
+});
+
+describe('高額療養費 calcKogaku', () => {
+  it('不変条件: 自己負担上限 ≤ 窓口3割負担、払い戻しは非負', () => {
+    const medicals = [300_000, 500_000, 1_000_000, 3_000_000, 5_000_000];
+    const brackets = Object.keys(KOGAKU_BRACKETS) as (keyof typeof KOGAKU_BRACKETS)[];
+    for (const b of brackets) {
+      for (const m of medicals) {
+        const r = calcKogaku({ medicalCostTotal: m, incomeBracket: b });
+        expect(r.selfPayCap).toBeGreaterThan(0);
+        expect(r.refund).toBeGreaterThanOrEqual(0);
+        expect(r.windowPay).toBeGreaterThanOrEqual(0);
+        // refund = max(0, windowPay - selfPayCap)の整合
+        expect(r.refund).toBe(Math.max(0, r.windowPay - r.selfPayCap));
+      }
+    }
+  });
+
+  it('所得が高いほど自己負担上限が高い（単調性: ア≥イ≥ウ≥エ≥オ）', () => {
+    const medical = 1_000_000;
+    const orders: (keyof typeof KOGAKU_BRACKETS)[] = ['ア', 'イ', 'ウ', 'エ', 'オ'];
+    let prev = Infinity;
+    for (const b of orders) {
+      const r = calcKogaku({ medicalCostTotal: medical, incomeBracket: b });
+      expect(r.selfPayCap).toBeLessThanOrEqual(prev);
+      prev = r.selfPayCap;
+    }
+  });
+
+  it('多数回該当は通常より上限が低い', () => {
+    const medical = 1_000_000;
+    const brackets: (keyof typeof KOGAKU_BRACKETS)[] = ['ア', 'イ', 'ウ', 'エ', 'オ'];
+    for (const b of brackets) {
+      const normal = calcKogaku({ medicalCostTotal: medical, incomeBracket: b });
+      const multiple = calcKogaku({ medicalCostTotal: medical, incomeBracket: b, multipleHit: true });
+      expect(multiple.selfPayCap).toBeLessThanOrEqual(normal.selfPayCap);
+    }
+  });
+
+  it('区分ウ・総医療費100万: 公式値(約80,100+7,330=87,430円前後)', () => {
+    // 総医療費100万円: 80,100 + (1,000,000 - 267,000) * 0.01 = 80,100 + 7,330 = 87,430
+    const r = calcKogaku({ medicalCostTotal: 1_000_000, incomeBracket: 'ウ' });
+    expect(r.selfPayCap).toBe(87_430);
+    expect(r.windowPay).toBe(300_000); // 3割
+    expect(r.refund).toBe(300_000 - 87_430); // 212,570
+  });
+
+  it('区分エ・オはフラット（医療費増加で上限変わらない）', () => {
+    const r1 = calcKogaku({ medicalCostTotal: 500_000, incomeBracket: 'エ' });
+    const r2 = calcKogaku({ medicalCostTotal: 5_000_000, incomeBracket: 'エ' });
+    expect(r1.selfPayCap).toBe(r2.selfPayCap);
+
+    const r3 = calcKogaku({ medicalCostTotal: 500_000, incomeBracket: 'オ' });
+    const r4 = calcKogaku({ medicalCostTotal: 5_000_000, incomeBracket: 'オ' });
+    expect(r3.selfPayCap).toBe(r4.selfPayCap);
+  });
+
+  it('区分ア・総医療費100万: 公式値(252,600+1,580=254,180円)', () => {
+    // 総医療費100万円: 252,600 + (1,000,000 - 842,000) * 0.01 = 252,600 + 1,580 = 254,180
+    const r = calcKogaku({ medicalCostTotal: 1_000_000, incomeBracket: 'ア' });
+    expect(r.selfPayCap).toBe(254_180);
   });
 });
 

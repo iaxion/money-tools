@@ -1,0 +1,253 @@
+---
+import Base from '../../layouts/Base.astro';
+import Freshness from '../../components/Freshness.astro';
+import RelatedTools from '../../components/RelatedTools.astro';
+import { SITE } from '../../config.ts';
+import { KOGAKU_BRACKETS } from '../../lib/kogaku.ts';
+
+const path = '/tools/kogaku';
+const title = '高額療養費 自己負担上限シミュレーター（2026年・令和8年現行制度）';
+const description =
+  '1か月の医療費と所得区分を入力するだけで、高額療養費制度の自己負担上限額と払い戻し見込みを概算。70歳未満対応・多数回該当にも対応した無料シミュレーター。';
+
+const brackets = Object.entries(KOGAKU_BRACKETS).map(([key, v]) => ({
+  key,
+  label: v.label,
+}));
+
+const faqs = [
+  {
+    q: '高額療養費制度とは何ですか？',
+    a: '1か月（1日〜末日）の医療費の自己負担が一定の上限を超えた場合、超えた分が健康保険から払い戻される制度です。入院・手術など高額な医療費がかかったときに家計を守るセーフティネットです。',
+  },
+  {
+    q: '所得区分はどうやって確認しますか？',
+    a: '協会けんぽの場合、標準報酬月額で区分が決まります。目安として、区分ア（年収約1,160万円以上）・イ（約770〜1,160万円）・ウ（約370〜770万円）・エ（〜約370万円）・オ（住民税非課税）です。正確には加入する健康保険組合や協会けんぽに確認してください。',
+  },
+  {
+    q: '多数回該当とは何ですか？',
+    a: '直近12か月の間に同一世帯で高額療養費の支給が3回以上あった場合、4回目以降は自己負担上限額がさらに引き下げられます。これを多数回該当（多数回）と呼びます。',
+  },
+  {
+    q: '2026年8月に制度が変わると聞きましたが？',
+    a: '2025年12月に政府が高額療養費の自己負担上限の引き上げを決定し、2026年8月から段階的に施行される予定です。本ツールは現行制度（引き上げ前）の数値を表示しています。改正後の正確な金額は厚生労働省の公式情報をご確認ください。',
+  },
+  {
+    q: '計算結果は正確ですか？',
+    a: '概算です。実際の支給額は加入する健康保険組合や協会けんぽの認定による差異があります。入院時の食事代・差額ベッド代・先進医療費などは対象外です。正確な金額は加入する保険者にお問い合わせください。',
+  },
+];
+
+const jsonLd = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'ホーム', item: SITE.url + '/' },
+      { '@type': 'ListItem', position: 2, name: '高額療養費シミュレーター', item: SITE.url + path + '/' },
+    ],
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: faqs.map((f) => ({
+      '@type': 'Question',
+      name: f.q,
+      acceptedAnswer: { '@type': 'Answer', text: f.a },
+    })),
+  },
+];
+---
+
+<Base title={title} description={description} path={path} jsonLd={jsonLd}>
+  <section class="hero" style="padding-bottom:6px;">
+    <h1>高額療養費 自己負担上限シミュレーター</h1>
+    <p>1か月の医療費（10割）と所得区分を入力するだけで、自己負担の上限額と払い戻し見込みを概算します。70歳未満対応。</p>
+  </section>
+
+  <div class="panel" style="border-left: 4px solid #f59e0b; background:#fffbeb;">
+    <p style="margin:0; font-size:.95em;">
+      ⚠️ <strong>2026年8月に制度改正予定：</strong>
+      政府は自己負担上限の引き上げを決定し、2026年8月から段階的に施行されます。
+      本ツールは現行制度（改正前）の数値を表示しています。
+      詳細は<a href="https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/kenkou_iryou/iryouhoken/juuyou/kougakuiryou/index.html" target="_blank" rel="noopener noreferrer">厚生労働省の公式情報</a>をご確認ください。
+    </p>
+  </div>
+
+  <div class="panel">
+    <form id="calc" autocomplete="off">
+      <div class="field">
+        <label for="medical">1か月の総医療費（10割・円）<span class="hint"> ／ 窓口3割負担の場合は÷0.3で換算</span></label>
+        <input type="number" id="medical" inputmode="numeric" min="0" step="10000" value="1000000" />
+        <p id="window-hint" style="margin:.4em 0 0; font-size:.88em; color:#6b7488;"></p>
+      </div>
+
+      <div class="field">
+        <label for="bracket">所得区分（70歳未満）</label>
+        <select id="bracket">
+          {brackets.map((b) => (
+            <option value={b.key}>{b.label}</option>
+          ))}
+        </select>
+        <p style="margin:.4em 0 0; font-size:.85em; color:#6b7488;">
+          ※ 標準報酬月額や年収の目安です。正確な区分は加入する健康保険組合・協会けんぽにご確認ください。
+        </p>
+      </div>
+
+      <div class="field">
+        <div class="checks">
+          <label>
+            <input type="checkbox" id="multiple" />
+            多数回該当（直近12か月で4回目以降の高額療養費）
+          </label>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <div id="result" class="panel" aria-live="polite">
+    <div class="result-hero">
+      <p class="label">自己負担上限額（概算）</p>
+      <p class="big" id="r-cap">—</p>
+      <p class="sub">払い戻し見込み <strong id="r-refund">—</strong></p>
+    </div>
+
+    <table class="breakdown">
+      <tbody>
+        <tr><td>総医療費（10割）</td><td class="num" id="r-total">—</td></tr>
+        <tr><td>窓口負担（3割）</td><td class="num" id="r-window">—</td></tr>
+        <tr><td>自己負担上限額</td><td class="num" id="r-cap2">—</td></tr>
+        <tr class="total"><td>払い戻し見込み</td><td class="num" id="r-refund2">—</td></tr>
+      </tbody>
+    </table>
+
+    <div class="note">
+      <strong>概算についての注意：</strong>
+      本ツールは厚生労働省が公表している70歳未満の高額療養費制度（現行）に基づき概算します。
+      実際の支給額は加入する健康保険組合・協会けんぽの認定により異なります。
+      入院時の食事代・差額ベッド代・先進医療費・保険適用外の費用は自己負担上限の対象外です。
+      正確な金額は加入する保険者または医療機関の窓口にご確認ください。
+    </div>
+    <Freshness />
+  </div>
+
+  <section class="prose">
+    <h2>高額療養費制度とは</h2>
+    <p>
+      高額療養費制度は、1か月（1日から末日まで）の医療費の自己負担が<strong>所得に応じた上限額</strong>を超えた場合、
+      超えた分が健康保険から後で払い戻される制度です。
+      入院や手術、がん治療などで医療費が高額になっても、一定の上限以上は実質的に支払わなくて済む仕組みです。
+    </p>
+
+    <h3>所得区分（70歳未満）の目安</h3>
+    <div style="overflow-x:auto;">
+      <table class="breakdown">
+        <thead>
+          <tr>
+            <th>区分</th>
+            <th>標準報酬月額</th>
+            <th>年収目安</th>
+            <th>自己負担上限（月・通常）</th>
+            <th>多数回該当</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>ア</td>
+            <td>83万円以上</td>
+            <td>約1,160万円〜</td>
+            <td>252,600円＋（総医療費−842,000）×1%</td>
+            <td>140,100円</td>
+          </tr>
+          <tr>
+            <td>イ</td>
+            <td>53〜79万円</td>
+            <td>約770〜1,160万円</td>
+            <td>167,400円＋（総医療費−558,000）×1%</td>
+            <td>93,000円</td>
+          </tr>
+          <tr>
+            <td>ウ</td>
+            <td>28〜50万円</td>
+            <td>約370〜770万円</td>
+            <td>80,100円＋（総医療費−267,000）×1%</td>
+            <td>44,400円</td>
+          </tr>
+          <tr>
+            <td>エ</td>
+            <td>26万円以下</td>
+            <td>〜約370万円</td>
+            <td>57,600円</td>
+            <td>44,400円</td>
+          </tr>
+          <tr>
+            <td>オ</td>
+            <td>住民税非課税</td>
+            <td>住民税非課税</td>
+            <td>35,400円</td>
+            <td>24,600円</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="font-size:.88em; color:#6b7488;">
+      出典: 厚生労働省「高額療養費制度を利用される皆さまへ」（現行制度・2026年8月改正前）
+    </p>
+
+    <h2>よくある質問</h2>
+    {faqs.map((f) => (
+      <details>
+        <summary>{f.q}</summary>
+        <p>{f.a}</p>
+      </details>
+    ))}
+  </section>
+
+  <RelatedTools tools={[
+    { href: '/tools/tedori/', name: '給与の手取り計算', desc: '額面年収から手取りと税金・社会保険料の内訳を概算' },
+    { href: '/tools/taishoku/', name: '退職金の手取り計算', desc: '退職所得控除と税額を概算' },
+    { href: '/tools/furusato/', name: 'ふるさと納税 限度額', desc: '年収・家族構成から控除上限額を計算' },
+    { href: '/tools/kabe/', name: '年収の壁シミュレーター', desc: '106/130/178万円の壁を判定' },
+    { href: '/tools/bonus/', name: 'ボーナスの手取り計算', desc: '賞与の手取りと税金内訳を概算' },
+  ]} />
+</Base>
+
+<script>
+  import { calcKogaku } from '../../lib/kogaku.ts';
+
+  const $ = (id: string) => document.getElementById(id) as HTMLElement;
+  const medical = $('medical') as HTMLInputElement;
+  const bracket = $('bracket') as HTMLSelectElement;
+  const multiple = $('multiple') as HTMLInputElement;
+
+  function yen(n: number): string {
+    return n.toLocaleString('ja-JP') + '円';
+  }
+
+  function render() {
+    const total = Number(medical.value) || 0;
+    const r = calcKogaku({
+      medicalCostTotal: total,
+      incomeBracket: bracket.value as 'ア' | 'イ' | 'ウ' | 'エ' | 'オ',
+      multipleHit: multiple.checked,
+    });
+
+    $('window-hint').textContent = total > 0
+      ? `窓口3割負担の目安: 約${yen(Math.round(total * 0.3))}`
+      : '';
+
+    $('r-cap').textContent = yen(r.selfPayCap);
+    $('r-refund').textContent = r.refund > 0 ? `約${yen(r.refund)}` : '払い戻しなし';
+
+    $('r-total').textContent = yen(total);
+    $('r-window').textContent = yen(r.windowPay);
+    $('r-cap2').textContent = yen(r.selfPayCap);
+    $('r-refund2').textContent = r.refund > 0 ? yen(r.refund) : '0円';
+  }
+
+  for (const el of [medical, bracket, multiple]) {
+    el.addEventListener('input', render);
+    el.addEventListener('change', render);
+  }
+  render();
+</script>
