@@ -1,0 +1,44 @@
+name: Scoreboard
+
+# 毎日 Cloudflare Web Analytics から実トラフィックを取得し docs/scoreboard.md を更新する。
+# AI(戦略家/クリティック/ビルダー)はこのファイルを読み、伸びてるページに注力する＝データ駆動の土台。
+# トークンは Secret 経由（AIエージェントには触らせない）。コミットは [skip ci] でCI/デプロイを起こさない。
+
+on:
+  schedule:
+    - cron: '17 21 * * *' # 毎日 06:17 JST
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: scoreboard
+  cancel-in-progress: true
+
+jobs:
+  scoreboard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: 解析を取得して scoreboard.md を更新
+        env:
+          CF_ANALYTICS_TOKEN: ${{ secrets.CF_ANALYTICS_TOKEN }}
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+        run: node scripts/scoreboard.mjs
+
+      - name: 変更があればコミット（[skip ci] でデプロイを起こさない）
+        run: |
+          git add docs/scoreboard.md
+          if git diff --cached --quiet; then
+            echo "変更なし"
+          else
+            git config user.name "iaxion-scoreboard"
+            git config user.email "noreply@iaxion.dev"
+            git commit -m "chore(scoreboard): 実トラフィック更新 [skip ci]"
+            git push
+          fi
