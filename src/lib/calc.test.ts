@@ -10,6 +10,7 @@ import { calcKogaku, KOGAKU_BRACKETS } from './kogaku.ts';
 import { calcShitsugyo, calcDailyBenefit } from './shitsugyo.ts';
 import { calcIdeco } from './ideco.ts';
 import { calcFukugyo } from './fukugyo.ts';
+import { calcFreelance, NENKIN_ANNUAL_2026 } from './freelance.ts';
 
 /**
  * 計算エンジンの安全弁テスト（フルオート運用の品質ゲート）。
@@ -484,5 +485,80 @@ describe('副業確定申告 calcFukugyo', () => {
     const r = calcFukugyo({ ...base, subIncome: 500_000 });
     expect(r.totalAdditionalTax).toBeGreaterThan(50_000);
     expect(r.totalAdditionalTax).toBeLessThan(300_000);
+  });
+});
+
+describe('フリーランス calcFreelance', () => {
+  const NHI = 400_000; // 国民健康保険 代表値（自治体・所得により異なる）
+
+  it('普遍的な不変条件（年度非依存）', () => {
+    const revenues = [3_000_000, 4_000_000, 6_000_000, 8_000_000, 10_000_000];
+    let prevTax = -1;
+    for (const rev of revenues) {
+      const r = calcFreelance({ revenue: rev, expenses: 0, aoiroDeduction: 0, nationalHealthInsurance: NHI });
+      // 手取りは事業所得以下・非負
+      expect(r.takeHome).toBeLessThanOrEqual(r.businessIncome);
+      expect(r.takeHome).toBeGreaterThanOrEqual(0);
+      // 各控除は非負
+      expect(r.incomeTax).toBeGreaterThanOrEqual(0);
+      expect(r.residentTax).toBeGreaterThanOrEqual(0);
+      expect(r.socialInsuranceTotal).toBeGreaterThanOrEqual(0);
+      // 内訳の整合
+      expect(r.socialInsuranceTotal).toBe(r.nenkin + r.kokuminKenko);
+      expect(r.totalDeductions).toBe(r.incomeTax + r.residentTax + r.socialInsuranceTotal);
+      expect(r.takeHome).toBe(Math.max(0, r.businessIncome - r.totalDeductions));
+      // 月額 × 12 ≒ 年額（端数処理の誤差のみ）
+      expect(Math.abs(r.takeHomeMonthly * 12 - r.takeHome)).toBeLessThan(12);
+      // 所得税+住民税は事業所得増加に対して単調増加
+      const tax = r.incomeTax + r.residentTax;
+      expect(tax).toBeGreaterThan(prevTax);
+      prevTax = tax;
+    }
+  });
+
+  it('国民年金は令和8年度確定額（年間203,760円）', () => {
+    const r = calcFreelance({ revenue: 5_000_000, expenses: 0, aoiroDeduction: 0, nationalHealthInsurance: 0 });
+    expect(r.nenkin).toBe(NENKIN_ANNUAL_2026); // 203,760
+    expect(r.nenkin).toBe(203_760);
+  });
+
+  it('国民健康保険はユーザー入力がそのまま反映される', () => {
+    const r = calcFreelance({ revenue: 5_000_000, expenses: 0, aoiroDeduction: 0, nationalHealthInsurance: 350_000 });
+    expect(r.kokuminKenko).toBe(350_000);
+    expect(r.socialInsuranceTotal).toBe(NENKIN_ANNUAL_2026 + 350_000);
+  });
+
+  it('青色申告特別控除が事業所得と税を減らす', () => {
+    const r65 = calcFreelance({ revenue: 3_000_000, expenses: 500_000, aoiroDeduction: 650_000, nationalHealthInsurance: NHI });
+    const r0  = calcFreelance({ revenue: 3_000_000, expenses: 500_000, aoiroDeduction: 0,       nationalHealthInsurance: NHI });
+    expect(r65.businessIncome).toBeLessThan(r0.businessIncome);
+    expect(r65.incomeTax + r65.residentTax).toBeLessThanOrEqual(r0.incomeTax + r0.residentTax);
+  });
+
+  it('青色申告特別控除は純利益を超えない（超えた分は切り捨て）', () => {
+    // 売上100万・経費80万 → 純利益20万。青色65万を適用しても事業所得は0になる
+    const r = calcFreelance({ revenue: 1_000_000, expenses: 800_000, aoiroDeduction: 650_000, nationalHealthInsurance: 0 });
+    expect(r.businessIncome).toBe(0);
+  });
+
+  it('売上500万・経費50万・青色65万の概算レンジ', () => {
+    // 事業所得 = 500万 - 50万 - 65万 = 385万
+    const r = calcFreelance({ revenue: 5_000_000, expenses: 500_000, aoiroDeduction: 650_000, nationalHealthInsurance: NHI });
+    expect(r.businessIncome).toBe(3_850_000);
+    // 手取り率は概ね50〜85%（社保・税の合計は事業所得の15〜50%）
+    expect(r.takeHomeRate).toBeGreaterThan(0.50);
+    expect(r.takeHomeRate).toBeLessThan(0.85);
+    expect(r.effectiveTaxRate).toBeGreaterThan(0);
+    expect(r.effectiveTaxRate).toBeLessThan(0.50);
+  });
+
+  it('売上=0 → 事業所得・税・手取りすべて0', () => {
+    const r = calcFreelance({ revenue: 0, expenses: 0, aoiroDeduction: 0, nationalHealthInsurance: 0 });
+    expect(r.businessIncome).toBe(0);
+    expect(r.incomeTax).toBe(0);
+    expect(r.residentTax).toBe(0);
+    expect(r.takeHome).toBe(0);
+    expect(r.takeHomeRate).toBe(0);
+    expect(r.effectiveTaxRate).toBe(0);
   });
 });

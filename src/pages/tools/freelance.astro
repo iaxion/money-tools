@@ -1,0 +1,262 @@
+---
+import Base from '../../layouts/Base.astro';
+import Freshness from '../../components/Freshness.astro';
+import RelatedTools from '../../components/RelatedTools.astro';
+import { SITE } from '../../config.ts';
+import { calcFreelance } from '../../lib/freelance.ts';
+
+const path = '/tools/freelance';
+const title = 'フリーランス・個人事業主の税金・手取り計算（2026年・令和8年対応）';
+const description =
+  '売上・経費・青色申告特別控除を入力するだけで、所得税・住民税・国民年金・国民健康保険と手取りを概算。2026年(令和8年)最新税制・国民年金確定額対応の個人事業主向け無料シミュレーター。';
+
+/** 事業所得別早見表（青色65万控除・NHI代表値） */
+const HAYAMI_INCOMES = [150, 200, 300, 400, 500, 600, 700, 800, 1000, 1200, 1500];
+const HAYAMI_NHI = 350_000; // 代表値（自治体・所得により大きく異なる）
+const hayami = HAYAMI_INCOMES.map((man) => {
+  // 事業所得 = 売上をそのまま使用（経費・青色控除済みの想定）
+  const r = calcFreelance({
+    revenue: man * 10_000,
+    expenses: 0,
+    aoiroDeduction: 0,
+    nationalHealthInsurance: HAYAMI_NHI,
+  });
+  return {
+    income: man,
+    takeHomeAnnual: Math.round(r.takeHome / 10_000),
+    takeHomeMonthly: Math.round((r.takeHomeMonthly / 10_000) * 10) / 10,
+    rate: Math.round(r.takeHomeRate * 1000) / 10,
+  };
+});
+
+const faqs = [
+  {
+    q: 'フリーランスの手取りはどう計算しますか？',
+    a: '事業所得（売上 − 経費 − 青色申告特別控除）から、国民年金・国民健康保険料（社会保険料控除）と所得税・住民税を差し引いた金額が手取りです。本ツールは2026年(令和8年)の税率・控除を用いて概算します。',
+  },
+  {
+    q: '青色申告特別控除（65万円）を受けるには何が必要ですか？',
+    a: '65万円の控除を受けるには、①青色申告の承認を受けていること、②e-Tax（電子申告）または電子帳簿保存で申告すること、③複式簿記で記帳し貸借対照表・損益計算書を添付することが必要です。電子申告でない場合は55万円控除となります。',
+  },
+  {
+    q: '国民健康保険料を自分で入力する理由は？',
+    a: '国民健康保険料は市区町村ごとに計算方式・料率が異なるため、全国一律の概算が困難です。お住まいの自治体の「国民健康保険料 試算」ページや、前年の保険料通知をご参照のうえ入力してください。',
+  },
+  {
+    q: '計算結果はどの程度正確ですか？',
+    a: '概算です。国民健康保険料の自治体差・各種控除の有無（iDeCo、医療費控除など）・事業税・個人住民税の特例等は簡略化しています。実際の納税額は確定申告後に確定するため、税理士等にご確認ください。',
+  },
+];
+
+const jsonLd = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'ホーム', item: SITE.url + '/' },
+      {
+        '@type': 'ListItem',
+        position: 2,
+        name: 'フリーランス・個人事業主の税金・手取り計算',
+        item: SITE.url + path + '/',
+      },
+    ],
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: faqs.map((f) => ({
+      '@type': 'Question',
+      name: f.q,
+      acceptedAnswer: { '@type': 'Answer', text: f.a },
+    })),
+  },
+];
+---
+
+<Base title={title} description={description} path={path} jsonLd={jsonLd}>
+  <section class="hero" style="padding-bottom:6px;">
+    <h1>フリーランス・個人事業主の税金・手取り計算</h1>
+    <p>売上・経費・青色申告特別控除を入力するだけで、税金・社会保険料と手取りを概算します。2026年(令和8年)税制対応。</p>
+  </section>
+
+  <div class="panel">
+    <form id="calc" autocomplete="off">
+      <div class="row">
+        <div class="field">
+          <label for="revenue">売上収入（年額）<span class="hint"> ／ 円</span></label>
+          <input type="number" id="revenue" inputmode="numeric" min="0" step="100000" value="6000000" />
+        </div>
+        <div class="field">
+          <label for="expenses">必要経費（年額）<span class="hint"> ／ 円</span></label>
+          <input type="number" id="expenses" inputmode="numeric" min="0" step="100000" value="1000000" />
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label for="aoiro">青色申告特別控除<span class="hint"> ／ 円</span></label>
+          <select id="aoiro">
+            <option value="650000" selected>65万円（e-Tax・複式簿記）</option>
+            <option value="550000">55万円（紙申告・複式簿記）</option>
+            <option value="100000">10万円（青色申告・簡易帳簿）</option>
+            <option value="0">0円（白色申告）</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="nhi">国民健康保険料（年額）<span class="hint"> ／ 円</span></label>
+          <input type="number" id="nhi" inputmode="numeric" min="0" step="10000" value="350000" />
+        </div>
+      </div>
+
+      <p class="field-note">※ 国民健康保険料は自治体・所得により大きく異なります。お住まいの自治体の試算ページや昨年の通知書をご参照ください。</p>
+    </form>
+  </div>
+
+  <div id="result" class="panel" aria-live="polite">
+    <div class="result-hero">
+      <p class="label">手取り年収（概算）</p>
+      <p class="big" id="r-takehome-big">—</p>
+      <p class="sub">月あたり <strong id="r-monthly">—</strong>　／　手取り率 <strong id="r-rate">—</strong></p>
+    </div>
+
+    <table class="breakdown">
+      <tbody>
+        <tr><td>売上収入</td><td class="num" id="r-revenue">—</td></tr>
+        <tr><td class="muted">　必要経費</td><td class="num" id="r-expenses">−—</td></tr>
+        <tr><td class="muted">　青色申告特別控除</td><td class="num" id="r-aoiro">−—</td></tr>
+        <tr><td><strong>事業所得</strong></td><td class="num" id="r-business">—</td></tr>
+        <tr><td class="sect" colspan="2">社会保険料</td></tr>
+        <tr><td class="muted">　国民年金（令和8年度）</td><td class="num" id="r-nenkin">—</td></tr>
+        <tr><td class="muted">　国民健康保険（入力値）</td><td class="num" id="r-nhi">—</td></tr>
+        <tr><td class="sect" colspan="2">税金</td></tr>
+        <tr><td class="muted">　所得税（復興税込み）</td><td class="num" id="r-incometax">—</td></tr>
+        <tr><td class="muted">　住民税</td><td class="num" id="r-residenttax">—</td></tr>
+        <tr><td>控除合計</td><td class="num" id="r-deductions">—</td></tr>
+        <tr class="total"><td>手取り年収</td><td class="num" id="r-takehome">—</td></tr>
+        <tr><td class="muted">　実効税率（所得税+住民税）</td><td class="num" id="r-effectiverate">—</td></tr>
+      </tbody>
+    </table>
+
+    <div class="note">
+      <strong>概算についての注意：</strong>
+      国民年金は令和8年度確定額（月額16,980円・年額203,760円）を使用。国民健康保険料はユーザー入力値をそのまま適用。所得税の基礎控除は令和8年・9年の特例（合計所得489万円以下で104万円）を適用。住民税は所得割10%＋均等割5,000円。事業税・iDeCo・医療費控除等は含みません。実際の税額は確定申告後に確定します。
+    </div>
+    <Freshness />
+  </div>
+
+  <section class="prose">
+    <h2>フリーランスの税金の仕組み</h2>
+    <p>
+      フリーランス・個人事業主は給与所得者と異なり、社会保険は<strong>国民年金</strong>と<strong>国民健康保険</strong>に加入します。
+      確定申告で<strong>青色申告特別控除</strong>（最大65万円）を適用すると課税所得が大きく減り、節税効果があります。
+    </p>
+
+    <h3>差し引かれるもの</h3>
+    <ul>
+      <li><strong>必要経費</strong>：事業に直接関係する費用（通信費・家賃按分・交通費など）。売上から差し引いて事業所得を計算します。</li>
+      <li><strong>青色申告特別控除</strong>：65万円（e-Tax）・55万円（紙申告）・10万円（簡易帳簿）の3段階。白色申告は0円。</li>
+      <li><strong>国民年金保険料</strong>：令和8年度は月額16,980円・年額203,760円（定額）。全額が社会保険料控除の対象です。</li>
+      <li><strong>国民健康保険料</strong>：前年所得をもとに市区町村が決定。所得割・均等割などで構成され、自治体差が大きいのが特徴です。</li>
+      <li><strong>所得税</strong>：事業所得から各控除を引いた課税所得に累進税率（5〜45%）を適用。さらに復興特別所得税2.1%が上乗せされます。</li>
+      <li><strong>住民税</strong>：前年の事業所得をもとに所得割10%＋均等割5,000円が課税されます。</li>
+    </ul>
+
+    <h3>2026年(令和8年)の変更点</h3>
+    <p>
+      物価高対策として<strong>基礎控除</strong>が引き上げられ、合計所得489万円以下の場合は最大104万円（従来の62万円＋特例42万円）になりました。
+      これにより低〜中所得のフリーランスの所得税負担が軽減されます。
+      また社会保険では2026年4月から<strong>子ども・子育て支援金</strong>（協会けんぽ標準報酬0.23%）の徴収が始まりましたが、国民健康保険への影響は各自治体の決定によります。
+    </p>
+
+    <h2>よくある質問</h2>
+    {faqs.map((f) => (
+      <details>
+        <summary>{f.q}</summary>
+        <p>{f.a}</p>
+      </details>
+    ))}
+  </section>
+
+  <section class="prose">
+    <h2>事業所得別 手取り早見表（2026年・国民健康保険35万円想定）</h2>
+    <p>下表は経費・青色申告特別控除適用後の<strong>事業所得</strong>別の概算です。国民健康保険料は年額35万円（代表値）を使用しています。実際の国民健康保険料は自治体・所得により大きく異なるため、上のシミュレーターで実際の保険料を入力して確認してください。</p>
+    <div style="overflow-x:auto;">
+      <table class="breakdown hayami-table">
+        <thead>
+          <tr>
+            <th>事業所得</th>
+            <th>手取り年収</th>
+            <th>手取り月収</th>
+            <th>手取り率</th>
+          </tr>
+        </thead>
+        <tbody>
+          {hayami.map((row) => (
+            <tr>
+              <td class="num">{row.income}万円</td>
+              <td class="num">約{row.takeHomeAnnual}万円</td>
+              <td class="num">約{row.takeHomeMonthly}万円</td>
+              <td class="num">{row.rate}%</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <RelatedTools tools={[
+    { href: '/tools/tedori/', name: '給与の手取り計算', desc: '額面年収から手取りと税金内訳を概算（給与所得者向け）' },
+    { href: '/tools/furusato/', name: 'ふるさと納税 限度額', desc: '年収・家族構成から自己負担2,000円の上限額を計算' },
+    { href: '/tools/taishoku/', name: '退職金の手取り計算', desc: '退職所得控除と税額を概算' },
+    { href: '/tools/nisa/', name: '積立NISAシミュレーター', desc: '毎月積立の将来資産を複利で試算' },
+    { href: '/tools/kanzan/', name: '年収・月収・時給 換算', desc: '時給・日給・月給・年収を相互換算' },
+  ]} />
+</Base>
+
+<script>
+  import { calcFreelance, NENKIN_ANNUAL_2026 } from '../../lib/freelance.ts';
+  import { yen } from '../../lib/tax.ts';
+
+  const $ = (id: string) => document.getElementById(id) as HTMLElement;
+  const revenue   = $('revenue')  as HTMLInputElement;
+  const expenses  = $('expenses') as HTMLInputElement;
+  const aoiro     = $('aoiro')    as HTMLSelectElement;
+  const nhi       = $('nhi')      as HTMLInputElement;
+
+  function render() {
+    const rev = Number(revenue.value) || 0;
+    const exp = Number(expenses.value) || 0;
+    const ao  = Number(aoiro.value) as 650_000 | 550_000 | 100_000 | 0;
+    const n   = Number(nhi.value) || 0;
+
+    const r = calcFreelance({
+      revenue: rev,
+      expenses: exp,
+      aoiroDeduction: ao,
+      nationalHealthInsurance: n,
+    });
+
+    $('r-takehome-big').textContent = yen(r.takeHome);
+    $('r-monthly').textContent      = yen(r.takeHomeMonthly);
+    $('r-rate').textContent         = (r.takeHomeRate * 100).toFixed(1) + '%';
+
+    $('r-revenue').textContent      = yen(rev);
+    $('r-expenses').textContent     = '−' + yen(exp);
+    $('r-aoiro').textContent        = '−' + yen(ao);
+    $('r-business').textContent     = yen(r.businessIncome);
+    $('r-nenkin').textContent       = yen(r.nenkin);
+    $('r-nhi').textContent          = yen(r.kokuminKenko);
+    $('r-incometax').textContent    = yen(r.incomeTax);
+    $('r-residenttax').textContent  = yen(r.residentTax);
+    $('r-deductions').textContent   = yen(r.totalDeductions);
+    $('r-takehome').textContent     = yen(r.takeHome);
+    $('r-effectiverate').textContent = (r.effectiveTaxRate * 100).toFixed(1) + '%';
+  }
+
+  for (const el of [revenue, expenses, aoiro, nhi]) {
+    el.addEventListener('input', render);
+    el.addEventListener('change', render);
+  }
+  render();
+</script>
