@@ -1,0 +1,277 @@
+---
+import Base from '../../layouts/Base.astro';
+import Freshness from '../../components/Freshness.astro';
+import RelatedTools from '../../components/RelatedTools.astro';
+import { SITE } from '../../config.ts';
+import { calcIdeco, IDECO_LIMITS_CURRENT, IDECO_LIMITS_REFORM } from '../../lib/ideco.ts';
+import { yen } from '../../lib/tax.ts';
+
+const path = '/tools/ideco';
+const title = 'iDeCo節税シミュレーター（2026年・令和8年対応）';
+const description =
+  'iDeCoの掛金から年間節税額（所得税＋住民税）と累計節税額の目安を概算。2026年12月施行の拠出限度額引き上げ（会社員2.3万→6.2万円）にも対応した無料シミュレーター。';
+
+const HAYAMI_INCOMES = [200, 300, 400, 500, 600, 700, 800, 1000];
+const hayami = HAYAMI_INCOMES.map((man) => {
+  const r = calcIdeco({
+    annualIncome: man * 10_000,
+    monthlyContribution: IDECO_LIMITS_CURRENT['会社員_企業年金なし'],
+    age: 35,
+    category: '会社員_企業年金なし',
+  });
+  return {
+    income: man,
+    annualSaved: r.totalAnnualSaved,
+    cumulativeSaved: r.cumulativeSaved,
+    incomeTaxSaved: r.incomeTaxSaved,
+    residentTaxSaved: r.residentTaxSaved,
+  };
+});
+
+const faqs = [
+  {
+    q: 'iDeCoの節税の仕組みを教えてください',
+    a: 'iDeCoの掛金は全額「小規模企業共済等掛金控除」として所得控除になります。これにより課税所得が掛金分だけ減り、所得税と住民税（所得割）が少なくなります。たとえば年収500万円・月2.3万円拠出なら年間で数万円の節税が期待できます。',
+  },
+  {
+    q: '2026年12月から何が変わりますか？',
+    a: '令和7年度年金制度改正法により、2026年12月1日から企業年金のない会社員のiDeCo拠出上限が月2.3万円から月6.2万円に引き上げられます。自営業者（第1号）は月6.8万円から月7.5万円に引き上げられます。上のシミュレーターの「2026年12月以降の新上限」チェックで新上限時の節税額を試算できます。',
+  },
+  {
+    q: '計算結果に運用益は含まれていますか？',
+    a: 'いいえ。本ツールは「掛金の所得控除による節税額」のみを計算します。iDeCoの運用益（非課税）や受取時の課税は対象外です。運用シミュレーションは積立NISAシミュレーターをご利用ください。',
+  },
+  {
+    q: '入力した情報は保存されますか？',
+    a: 'いいえ。計算はすべてブラウザ内で完結し、入力内容がサーバーに送信・保存されることはありません。',
+  },
+  {
+    q: '計算結果は正確ですか？',
+    a: '概算です。給与所得のみ・独身・扶養なしを前提とした簡略計算のため、実際の節税額は家族構成・他の所得控除・自治体差などにより異なります。正確な金額は確定申告書や税理士にご確認ください。',
+  },
+];
+
+const jsonLd = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'ホーム', item: SITE.url + '/' },
+      { '@type': 'ListItem', position: 2, name: 'iDeCo節税シミュレーター', item: SITE.url + path + '/' },
+    ],
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: faqs.map((f) => ({
+      '@type': 'Question',
+      name: f.q,
+      acceptedAnswer: { '@type': 'Answer', text: f.a },
+    })),
+  },
+];
+---
+
+<Base title={title} description={description} path={path} jsonLd={jsonLd}>
+  <section class="hero" style="padding-bottom:6px;">
+    <h1>iDeCo節税シミュレーター</h1>
+    <p>掛金と年収を入れるだけで、年間節税額（所得税＋住民税）と累計節税額の目安を概算します。2026年(令和8年)税制・2026年12月施行の拠出上限引き上げに対応。</p>
+  </section>
+
+  <div class="panel">
+    <form id="calc" autocomplete="off">
+      <div class="field">
+        <label for="income">額面年収（賞与込みの総支給額）<span class="hint"> ／ 円</span></label>
+        <input type="number" id="income" inputmode="numeric" min="0" step="100000" value="5000000" />
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label for="contribution">毎月の掛金<span class="hint"> ／ 円</span></label>
+          <input type="number" id="contribution" inputmode="numeric" min="0" step="1000" value="23000" />
+        </div>
+        <div class="field">
+          <label for="age">現在の年齢<span class="hint"> ／ 歳</span></label>
+          <input type="number" id="age" inputmode="numeric" min="18" max="80" step="1" value="35" />
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="category">職業・iDeCo加入区分</label>
+        <select id="category">
+          <option value="会社員_企業年金なし" selected>会社員（企業年金なし）</option>
+          <option value="会社員_企業年金あり">会社員（企業年金あり）</option>
+          <option value="公務員">公務員</option>
+          <option value="第1号_自営">自営業・フリーランス（第1号）</option>
+          <option value="第3号_専業主婦">専業主婦・夫（第3号）</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <div class="checks">
+          <label>
+            <input type="checkbox" id="useReform" />
+            2026年12月以降の新上限で計算（会社員は2.3万→6.2万円）
+          </label>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <div id="result" class="panel" aria-live="polite">
+    <div class="result-hero">
+      <p class="label">年間節税額（概算）</p>
+      <p class="big" id="r-total">—</p>
+      <p class="sub">所得税（復興税込み） <strong id="r-income-tax">—</strong>　／　住民税 <strong id="r-resident-tax">—</strong></p>
+    </div>
+
+    <table class="breakdown">
+      <tbody>
+        <tr><td>月額掛金（入力）</td><td class="num" id="r-monthly">—</td></tr>
+        <tr><td>年間掛金（上限適用後）</td><td class="num" id="r-annual">—</td></tr>
+        <tr><td>月額拠出上限</td><td class="num" id="r-limit">—</td></tr>
+        <tr class="total"><td>年間節税額</td><td class="num" id="r-total2">—</td></tr>
+        <tr><td>累計節税額（〜65歳）</td><td class="num" id="r-cumulative">—</td></tr>
+      </tbody>
+    </table>
+
+    <div id="over-limit-warning" style="display:none;margin-top:12px;" class="note" role="alert">
+      ⚠️ 入力した掛金が<strong id="r-over-amount">—</strong>/月超過しています。上限内の掛金で計算しています。
+    </div>
+
+    <div class="note" style="margin-top:12px;">
+      <strong>概算についての注意：</strong>
+      給与所得のみ・独身・扶養なしの前提で推計した概算です（家族構成や他の控除により実際は異なります）。
+      運用益・受取時の課税は含まれません。節税額は現在の税率・掛金が継続する前提の単純合計です。
+      65歳未満まで拠出可能として計算しています。
+    </div>
+    <Freshness />
+  </div>
+
+  <section class="prose">
+    <h2>2026年12月 iDeCo拠出上限の引き上げ</h2>
+    <p>
+      令和7年度年金制度改正法により、<strong>2026年12月1日（2027年1月引落分）</strong>からiDeCoの拠出上限が大幅に引き上げられます。
+      特に<strong>企業年金のない会社員</strong>は月2.3万円から<strong>月6.2万円</strong>と約2.7倍に拡大し、節税効果が大きく増します。
+    </p>
+
+    <div style="overflow-x:auto;">
+      <table class="breakdown hayami-table">
+        <thead>
+          <tr>
+            <th>加入区分</th>
+            <th>現行上限（〜2026年11月）</th>
+            <th>新上限（2026年12月〜）</th>
+            <th>変化</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>会社員（企業年金なし）</td><td class="num">2.3万円/月</td><td class="num"><strong>6.2万円/月</strong></td><td class="num">+3.9万円/月</td></tr>
+          <tr><td>自営業・フリーランス（第1号）</td><td class="num">6.8万円/月</td><td class="num"><strong>7.5万円/月</strong></td><td class="num">+0.7万円/月</td></tr>
+          <tr><td>会社員（企業年金あり）</td><td class="num">2.0万円/月</td><td class="num">企業年金次第※</td><td class="num">—</td></tr>
+          <tr><td>公務員</td><td class="num">2.0万円/月</td><td class="num">共済掛金次第※</td><td class="num">—</td></tr>
+          <tr><td>専業主婦・夫（第3号）</td><td class="num">2.3万円/月</td><td class="num">2.3万円/月</td><td class="num">変更なし</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="font-size:0.85em;color:#6b7488;">※企業年金あり・公務員はiDeCoと企業年金の合算上限が6.2万円に変わりますが、iDeCo単独の上限は企業年金/共済の掛金額次第で個別に異なります。詳細はご加入の企業年金/共済窓口にご確認ください。</p>
+  </section>
+
+  <section class="prose">
+    <h2>年収別 節税額早見表（会社員・月2.3万円満額拠出・35歳）</h2>
+    <p>下表は企業年金のない会社員が月2.3万円（現行上限）を拠出した場合の年間節税額の概算です（独身・扶養なし・35歳・令和8年度税率）。</p>
+    <div style="overflow-x:auto;">
+      <table class="breakdown hayami-table">
+        <thead>
+          <tr>
+            <th>額面年収</th>
+            <th>年間節税額</th>
+            <th>うち所得税</th>
+            <th>うち住民税</th>
+            <th>累計節税額（〜65歳）</th>
+          </tr>
+        </thead>
+        <tbody>
+          {hayami.map((row) => (
+            <tr>
+              <td class="num">{row.income}万円</td>
+              <td class="num">約{Math.round(row.annualSaved / 100) * 100}円</td>
+              <td class="num">約{Math.round(row.incomeTaxSaved / 100) * 100}円</td>
+              <td class="num">約{Math.round(row.residentTaxSaved / 100) * 100}円</td>
+              <td class="num">約{Math.round(row.cumulativeSaved / 10_000)}万円</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="prose">
+    <h2>よくある質問</h2>
+    {faqs.map((f) => (
+      <details>
+        <summary>{f.q}</summary>
+        <p>{f.a}</p>
+      </details>
+    ))}
+  </section>
+
+  <RelatedTools tools={[
+    { href: '/tools/nisa/', name: '積立NISAシミュレーター', desc: '毎月の積立額と利回りから将来の資産額と運用益を試算' },
+    { href: '/tools/tedori/', name: '給与の手取り計算', desc: '額面年収から手取りと税金・社会保険料の内訳を概算' },
+    { href: '/tools/taishoku/', name: '退職金の手取り計算', desc: '退職金と勤続年数から退職所得控除と手取りを概算' },
+    { href: '/tools/furusato/', name: 'ふるさと納税 限度額', desc: '年収・家族構成から自己負担2,000円の控除上限額を計算' },
+  ]} />
+</Base>
+
+<script>
+  import { calcIdeco } from '../../lib/ideco.ts';
+  import { yen } from '../../lib/tax.ts';
+
+  type IdecoCategory =
+    | '会社員_企業年金なし'
+    | '会社員_企業年金あり'
+    | '公務員'
+    | '第1号_自営'
+    | '第3号_専業主婦';
+
+  const $ = (id: string) => document.getElementById(id) as HTMLElement;
+  const income = $('income') as HTMLInputElement;
+  const contribution = $('contribution') as HTMLInputElement;
+  const age = $('age') as HTMLInputElement;
+  const category = $('category') as HTMLSelectElement;
+  const useReform = $('useReform') as HTMLInputElement;
+
+  function render() {
+    const r = calcIdeco({
+      annualIncome: Number(income.value) || 0,
+      monthlyContribution: Number(contribution.value) || 0,
+      age: Number(age.value) || 35,
+      category: category.value as IdecoCategory,
+      useReformLimit: useReform.checked,
+    });
+
+    $('r-total').textContent = yen(r.totalAnnualSaved);
+    $('r-income-tax').textContent = yen(r.incomeTaxSaved);
+    $('r-resident-tax').textContent = yen(r.residentTaxSaved);
+    $('r-monthly').textContent = yen(Number(contribution.value) || 0) + '/月';
+    $('r-annual').textContent = yen(r.cappedContribution);
+    $('r-limit').textContent = yen(r.limitUsed) + '/月';
+    $('r-total2').textContent = yen(r.totalAnnualSaved);
+    $('r-cumulative').textContent = yen(r.cumulativeSaved) + '（残' + r.remainingYears + '年）';
+
+    const warning = $('over-limit-warning');
+    if (r.isOverLimit) {
+      $('r-over-amount').textContent = yen(r.monthlyExcess);
+      warning.style.display = '';
+    } else {
+      warning.style.display = 'none';
+    }
+  }
+
+  for (const el of [income, contribution, age, category, useReform]) {
+    el.addEventListener('input', render);
+    el.addEventListener('change', render);
+  }
+  render();
+</script>

@@ -8,6 +8,7 @@ import { fromHourly } from './convert.ts';
 import { calcKabe } from './kabe.ts';
 import { calcKogaku, KOGAKU_BRACKETS } from './kogaku.ts';
 import { calcShitsugyo, calcDailyBenefit } from './shitsugyo.ts';
+import { calcIdeco } from './ideco.ts';
 
 /**
  * 計算エンジンの安全弁テスト（フルオート運用の品質ゲート）。
@@ -369,5 +370,72 @@ describe('失業給付 calcShitsugyo', () => {
     expect(calcDailyBenefit(100_000, 40)).toBe(8_055);  // 30〜44歳
     expect(calcDailyBenefit(100_000, 55)).toBe(8_870);  // 45〜59歳
     expect(calcDailyBenefit(100_000, 62)).toBe(7_623);  // 60〜64歳
+  });
+});
+
+describe('iDeCo節税 calcIdeco', () => {
+  it('不変条件: 節税額非負・合計整合・cappedが上限内', () => {
+    const cases = [
+      { annualIncome: 3_000_000, monthlyContribution: 23_000, age: 35, category: '会社員_企業年金なし' as const },
+      { annualIncome: 5_000_000, monthlyContribution: 23_000, age: 45, category: '会社員_企業年金なし' as const },
+      { annualIncome: 8_000_000, monthlyContribution: 23_000, age: 50, category: '会社員_企業年金なし' as const },
+      { annualIncome: 5_000_000, monthlyContribution: 68_000, age: 40, category: '第1号_自営' as const },
+      { annualIncome: 4_000_000, monthlyContribution: 20_000, age: 30, category: '第3号_専業主婦' as const },
+    ];
+    for (const input of cases) {
+      const r = calcIdeco(input);
+      expect(r.incomeTaxSaved).toBeGreaterThanOrEqual(0);
+      expect(r.residentTaxSaved).toBeGreaterThanOrEqual(0);
+      expect(r.totalAnnualSaved).toBe(r.incomeTaxSaved + r.residentTaxSaved);
+      expect(r.cappedContribution).toBeLessThanOrEqual(r.limitUsed * 12);
+      expect(r.cumulativeSaved).toBe(r.totalAnnualSaved * r.remainingYears);
+    }
+  });
+
+  it('上限超過: isOverLimit=true・monthlyExcess正・cappedは上限内', () => {
+    // 会社員_企業年金なしの上限は23,000円/月
+    const r = calcIdeco({ annualIncome: 5_000_000, monthlyContribution: 30_000, age: 40, category: '会社員_企業年金なし' });
+    expect(r.isOverLimit).toBe(true);
+    expect(r.monthlyExcess).toBe(7_000);
+    expect(r.cappedContribution).toBe(23_000 * 12);
+  });
+
+  it('掛金0: 節税額は0', () => {
+    const r = calcIdeco({ annualIncome: 5_000_000, monthlyContribution: 0, age: 40, category: '会社員_企業年金なし' });
+    expect(r.totalAnnualSaved).toBe(0);
+    expect(r.cumulativeSaved).toBe(0);
+    expect(r.isOverLimit).toBe(false);
+  });
+
+  it('節税額の単調性: 年収が高いほど節税額が多い（同じ掛金）', () => {
+    const incomes = [3_000_000, 4_000_000, 5_000_000, 6_000_000, 8_000_000];
+    let prev = 0;
+    for (const inc of incomes) {
+      const r = calcIdeco({ annualIncome: inc, monthlyContribution: 23_000, age: 40, category: '会社員_企業年金なし' });
+      expect(r.totalAnnualSaved).toBeGreaterThanOrEqual(prev);
+      prev = r.totalAnnualSaved;
+    }
+  });
+
+  it('節税額は掛金×最高実効税率（所得税45%+復興2.1%+住民税10%）以内', () => {
+    const r = calcIdeco({ annualIncome: 20_000_000, monthlyContribution: 23_000, age: 40, category: '会社員_企業年金なし' });
+    const maxRate = 0.45 * (1 + RATES.reconstructionRate) + RATES.residentRate;
+    expect(r.totalAnnualSaved).toBeLessThanOrEqual(Math.ceil(r.cappedContribution * maxRate));
+  });
+
+  it('改正後上限: 会社員_企業年金なしは6.2万/月まで拠出可（現行は超過→改正後は上限内）', () => {
+    const current = calcIdeco({ annualIncome: 6_000_000, monthlyContribution: 62_000, age: 40, category: '会社員_企業年金なし', useReformLimit: false });
+    const reform = calcIdeco({ annualIncome: 6_000_000, monthlyContribution: 62_000, age: 40, category: '会社員_企業年金なし', useReformLimit: true });
+    expect(current.isOverLimit).toBe(true);
+    expect(current.cappedContribution).toBe(23_000 * 12);
+    expect(reform.isOverLimit).toBe(false);
+    expect(reform.cappedContribution).toBe(62_000 * 12);
+    expect(reform.totalAnnualSaved).toBeGreaterThan(current.totalAnnualSaved);
+  });
+
+  it('65歳以上の残余年数は0・累計は0', () => {
+    const r = calcIdeco({ annualIncome: 5_000_000, monthlyContribution: 23_000, age: 65, category: '会社員_企業年金なし' });
+    expect(r.remainingYears).toBe(0);
+    expect(r.cumulativeSaved).toBe(0);
   });
 });
