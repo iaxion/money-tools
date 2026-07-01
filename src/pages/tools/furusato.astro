@@ -4,11 +4,19 @@ import Freshness from '../../components/Freshness.astro';
 import AffiliateCTA from '../../components/AffiliateCTA.astro';
 import RelatedTools from '../../components/RelatedTools.astro';
 import { SITE, AFFILIATES } from '../../config.ts';
+import { calcFurusato } from '../../lib/furusato.ts';
 
 const path = '/tools/furusato';
 const title = 'ふるさと納税 限度額シミュレーター（2026年）';
 const description =
   '年収と家族構成を入れるだけで、ふるさと納税の控除上限額（自己負担2,000円で済む目安）を計算。2026年税制対応の無料シミュレーター。';
+
+/** 年収別早見表（独身・扶養なし・40歳未満） */
+const HAYAMI_INCOMES = [200, 250, 300, 350, 400, 450, 500, 550, 600, 700, 800, 1000, 1200, 1500];
+const hayami = HAYAMI_INCOMES.map((man) => {
+  const r = calcFurusato({ annualIncome: man * 10_000, age40OrOver: false, hasSpouse: false, dependents: 0 });
+  return { income: man, limit: Math.round(r.limit / 1_000) };
+});
 
 const faqs = [
   {
@@ -131,6 +139,30 @@ const jsonLd = [
         <p>{f.a}</p>
       </details>
     ))}
+  </section>
+
+  <section class="prose">
+    <h2>年収別 ふるさと納税 上限額早見表（2026年・独身・扶養なし）</h2>
+    <p>下表は独身・扶養親族なし・40歳未満・ふるさと納税以外の大きな控除がないケースの概算です。配偶者控除・住宅ローン控除・iDeCo などがある場合は上限が下がります。</p>
+    <div style="overflow-x:auto;">
+      <table class="breakdown hayami-table">
+        <thead>
+          <tr>
+            <th>額面年収</th>
+            <th>上限の目安</th>
+          </tr>
+        </thead>
+        <tbody>
+          {hayami.map((row) => (
+            <tr>
+              <td class="num">{row.income}万円</td>
+              <td class="num">約{row.limit}千円</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+    <p>※ 千円未満を切り捨てた概算です。上のシミュレーターで正確な目安をご確認ください。</p>
   </section>
 
   <RelatedTools tools={[
