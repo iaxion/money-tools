@@ -9,6 +9,7 @@ import { calcKabe } from './kabe.ts';
 import { calcKogaku, KOGAKU_BRACKETS } from './kogaku.ts';
 import { calcShitsugyo, calcDailyBenefit } from './shitsugyo.ts';
 import { calcIdeco } from './ideco.ts';
+import { calcFukugyo } from './fukugyo.ts';
 
 /**
  * 計算エンジンの安全弁テスト（フルオート運用の品質ゲート）。
@@ -437,5 +438,51 @@ describe('iDeCo節税 calcIdeco', () => {
     const r = calcIdeco({ annualIncome: 5_000_000, monthlyContribution: 23_000, age: 65, category: '会社員_企業年金なし' });
     expect(r.remainingYears).toBe(0);
     expect(r.cumulativeSaved).toBe(0);
+  });
+});
+
+describe('副業確定申告 calcFukugyo', () => {
+  const base = { mainIncome: 5_000_000, age40OrOver: false, hasSpouse: false, dependents: 0 };
+
+  it('不変条件: 追加税は非負、副業所得が増えると追加税も増える', () => {
+    for (const sub of [0, 100_000, 200_000, 500_000, 1_000_000, 2_000_000]) {
+      const r = calcFukugyo({ ...base, subIncome: sub });
+      expect(r.additionalIncomeTax).toBeGreaterThanOrEqual(0);
+      expect(r.additionalResidentTax).toBeGreaterThanOrEqual(0);
+      expect(r.totalAdditionalTax).toBe(r.additionalIncomeTax + r.additionalResidentTax);
+      expect(r.totalAdditionalTax).toBeLessThanOrEqual(sub);
+    }
+    // 単調増加
+    const r10 = calcFukugyo({ ...base, subIncome: 300_000 });
+    const r20 = calcFukugyo({ ...base, subIncome: 600_000 });
+    expect(r20.totalAdditionalTax).toBeGreaterThan(r10.totalAdditionalTax);
+  });
+
+  it('副業20万以下は申告不要、20万超は申告必要', () => {
+    expect(calcFukugyo({ ...base, subIncome: 200_000 }).needsFiling).toBe(false);
+    expect(calcFukugyo({ ...base, subIncome: 200_001 }).needsFiling).toBe(true);
+    expect(calcFukugyo({ ...base, subIncome: 0 }).needsFiling).toBe(false);
+  });
+
+  it('副業所得0なら追加税は0', () => {
+    const r = calcFukugyo({ ...base, subIncome: 0 });
+    expect(r.additionalIncomeTax).toBe(0);
+    expect(r.additionalResidentTax).toBe(0);
+    expect(r.totalAdditionalTax).toBe(0);
+    expect(r.effectiveTaxRate).toBe(0);
+  });
+
+  it('実効税率は0〜1の範囲', () => {
+    for (const sub of [100_000, 500_000, 1_000_000, 3_000_000]) {
+      const r = calcFukugyo({ ...base, subIncome: sub });
+      expect(r.effectiveTaxRate).toBeGreaterThanOrEqual(0);
+      expect(r.effectiveTaxRate).toBeLessThan(1);
+    }
+  });
+
+  it('年収500万・副業50万の追加税は常識的な範囲（概ね10〜30万円）', () => {
+    const r = calcFukugyo({ ...base, subIncome: 500_000 });
+    expect(r.totalAdditionalTax).toBeGreaterThan(50_000);
+    expect(r.totalAdditionalTax).toBeLessThan(300_000);
   });
 });

@@ -1,0 +1,269 @@
+---
+import Base from '../../layouts/Base.astro';
+import Freshness from '../../components/Freshness.astro';
+import RelatedTools from '../../components/RelatedTools.astro';
+import { SITE } from '../../config.ts';
+import { calcFukugyo } from '../../lib/fukugyo.ts';
+import { yen } from '../../lib/tax.ts';
+
+const path = '/tools/fukugyo';
+const title = '副業の確定申告・税額シミュレーター（2026年・令和8年対応）';
+const description =
+  '会社員の副業所得から確定申告の要否と追加税額（所得税・住民税）を概算。20万円の壁の判定、副業所得に対する実効税率も表示。2026年(令和8年)税制対応の無料シミュレーター。';
+
+/** 早見表: 本業年収別・副業所得別の追加税額（概算） */
+const MAIN_INCOMES = [3_000_000, 4_000_000, 5_000_000, 6_000_000, 8_000_000];
+const SUB_INCOMES = [200_000, 500_000, 1_000_000, 2_000_000];
+const hayami = MAIN_INCOMES.map((main) => ({
+  main: main / 10_000,
+  cols: SUB_INCOMES.map((sub) => {
+    const r = calcFukugyo({ mainIncome: main, subIncome: sub, age40OrOver: false, hasSpouse: false, dependents: 0 });
+    return {
+      sub: sub / 10_000,
+      additional: Math.round(r.totalAdditionalTax / 1000) * 1000,
+      rate: Math.round(r.effectiveTaxRate * 1000) / 10,
+    };
+  }),
+}));
+
+const faqs = [
+  {
+    q: '副業所得とは何ですか？経費は引けますか？',
+    a: '副業所得（雑所得）は「収入 − 経費」で計算します。例えばネットショップの売上から材料費や送料を差し引いた金額、フリーランス収入から交通費や機材費を差し引いた金額などです。本ツールの「副業の所得」欄には経費を引いた後の金額を入力してください。',
+  },
+  {
+    q: '副業が20万円以下なら確定申告は不要ですか？',
+    a: '給与所得者（会社員等）は、給与以外の所得の合計が年20万円以下なら所得税の確定申告は原則不要です。ただし、医療費控除や住宅ローン控除など他の理由で確定申告する場合は全ての所得を申告する必要があります。また、20万円以下でも住民税の申告は必要になる場合があります（市区町村の窓口に相談を）。',
+  },
+  {
+    q: '副業の税金はどのくらいかかりますか？',
+    a: '副業所得に対する税率は、本業との「合算所得」に応じた累進税率が適用されます。本業の年収が500万円の場合、副業所得に対する所得税率はおおむね20〜23%程度です。さらに住民税（所得割10%）が翌年に課税されるため、実効税率は合計で概ね20〜35%前後になることが多いです。上のシミュレーターで目安を確認してください。',
+  },
+  {
+    q: '副業の住民税を会社に知られないようにできますか？',
+    a: '確定申告書の「住民税・事業税に関する事項」欄で、給与以外の所得分の住民税を「自分で納付（普通徴収）」に設定することで、副業分の住民税通知が会社に届かないようにできます。ただし100%確実ではなく、副業が本業と同種の場合は競業規定なども確認が必要です。',
+  },
+  {
+    q: 'フリーランスや個人事業主の場合は計算が違いますか？',
+    a: '本ツールは会社員が副業で「雑所得」を得る場合を想定しています。事業所得として申告する場合や、個人事業主・フリーランスが本業として活動する場合は、青色申告特別控除（最大65万円）・国民健康保険・国民年金など計算が大きく異なります。そのような方は税理士または公式の確定申告書作成コーナー（国税庁）でご確認ください。',
+  },
+];
+
+const jsonLd = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'ホーム', item: SITE.url + '/' },
+      { '@type': 'ListItem', position: 2, name: '副業の確定申告・税額シミュレーター', item: SITE.url + path + '/' },
+    ],
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: faqs.map((f) => ({
+      '@type': 'Question',
+      name: f.q,
+      acceptedAnswer: { '@type': 'Answer', text: f.a },
+    })),
+  },
+];
+---
+
+<Base title={title} description={description} path={path} jsonLd={jsonLd}>
+  <section class="hero" style="padding-bottom:6px;">
+    <h1>副業の確定申告・税額シミュレーター</h1>
+    <p>本業の年収と副業の所得を入力するだけで、確定申告の要否と追加の税額（所得税・住民税）の目安を概算。2026年(令和8年)税制対応。</p>
+  </section>
+
+  <div class="panel">
+    <form id="calc" autocomplete="off">
+      <div class="field">
+        <label for="main-income">本業の給与年収（額面・賞与込み）<span class="hint"> ／ 円</span></label>
+        <input type="number" id="main-income" inputmode="numeric" min="0" step="100000" value="5000000" />
+      </div>
+
+      <div class="field">
+        <label for="sub-income">副業の所得（収入 − 経費後）<span class="hint"> ／ 円</span></label>
+        <input type="number" id="sub-income" inputmode="numeric" min="0" step="10000" value="500000" />
+        <p class="hint" style="margin-top:4px;">※ 収入から必要経費（材料費・交通費等）を差し引いた金額を入力してください。</p>
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label for="age">年齢区分<span class="hint"> ／ 介護保険</span></label>
+          <select id="age">
+            <option value="0" selected>40歳未満</option>
+            <option value="1">40〜64歳（介護保険あり）</option>
+            <option value="0b">65歳以上</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="dependents">扶養親族（16歳以上）<span class="hint"> ／ 人</span></label>
+          <input type="number" id="dependents" inputmode="numeric" min="0" max="10" step="1" value="0" />
+        </div>
+      </div>
+
+      <div class="field">
+        <div class="checks">
+          <label><input type="checkbox" id="spouse" /> 配偶者控除の対象となる配偶者がいる</label>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <div id="result" class="panel" aria-live="polite">
+    <div class="result-hero">
+      <p class="label">副業による追加税合計（概算）</p>
+      <p class="big" id="r-total">—</p>
+      <p class="sub">実効税率（追加税 ÷ 副業所得） <strong id="r-rate">—</strong></p>
+    </div>
+
+    <div id="r-filing-banner" style="margin:8px 0 12px; padding:10px 14px; border-radius:8px; font-weight:600; font-size:0.95rem;"></div>
+
+    <table class="breakdown">
+      <tbody>
+        <tr><td>副業の所得</td><td class="num" id="r-sub">—</td></tr>
+        <tr><td class="sect" colspan="2">本業のみの税額（参考）</td></tr>
+        <tr><td class="muted">　所得税（復興税込み）</td><td class="num" id="r-base-it">—</td></tr>
+        <tr><td class="muted">　住民税</td><td class="num" id="r-base-rt">—</td></tr>
+        <tr><td class="sect" colspan="2">副業合算後の税額</td></tr>
+        <tr><td class="muted">　所得税（復興税込み）</td><td class="num" id="r-combined-it">—</td></tr>
+        <tr><td class="muted">　住民税（翌年課税）</td><td class="num" id="r-combined-rt">—</td></tr>
+        <tr><td class="sect" colspan="2">副業分の追加税額</td></tr>
+        <tr><td class="muted">　追加所得税</td><td class="num" id="r-add-it">—</td></tr>
+        <tr><td class="muted">　追加住民税（翌年）</td><td class="num" id="r-add-rt">—</td></tr>
+        <tr class="total"><td>追加税合計</td><td class="num" id="r-add-total">—</td></tr>
+      </tbody>
+    </table>
+
+    <div class="note">
+      <strong>概算についての注意：</strong>
+      本ツールは副業を「雑所得」として扱い、本業の社会保険料（協会けんぽ東京支部2026年度料率）はそのまま適用します。
+      副業から新たな社会保険料は発生しない前提（フリーランスの国保・国民年金等は考慮しません）。
+      住民税は翌年に普通徴収または特別徴収で課税されます。
+      事業所得として申告する場合・青色申告特別控除がある場合は税額が変わります。実際の申告には税理士または国税庁の確定申告書作成コーナーをご利用ください。
+    </div>
+    <Freshness />
+  </div>
+
+  <section class="prose">
+    <h2>副業の税金はなぜかかる？仕組みを解説</h2>
+    <p>
+      会社員の場合、本業の給与からは毎月「源泉徴収」として所得税・住民税が天引きされ、年末調整で精算されます。
+      しかし<strong>副業で得た所得は源泉徴収されていない</strong>ため、自分で確定申告して納税する必要があります。
+    </p>
+    <p>
+      日本の所得税は<strong>累進課税</strong>なので、本業の所得に副業の所得を足した「合計所得」に対して税率が決まります。
+      本業の税率が20%なら、副業の所得にも20%前後の税率が乗ります（正確には合計所得全体の税率が適用）。
+      さらに翌年の<strong>住民税（所得割10%）</strong>も増えるため、合計の実効税率は概ね20〜35%前後になることが多いです。
+    </p>
+
+    <h3>確定申告が必要なケース（20万円の壁）</h3>
+    <p>
+      給与所得者（会社員）が他に所得を得た場合、その合計が<strong>年20万円を超えると所得税の確定申告が必要</strong>です。
+      これが「副業の20万円の壁」と呼ばれるものです。20万円以下なら確定申告は原則不要ですが、
+      住民税の申告が別途必要になる場合があります。
+    </p>
+
+    <h2>よくある質問</h2>
+    {faqs.map((f) => (
+      <details>
+        <summary>{f.q}</summary>
+        <p>{f.a}</p>
+      </details>
+    ))}
+  </section>
+
+  <section class="prose">
+    <h2>副業所得別・追加税額の早見表（2026年・独身・扶養なし）</h2>
+    <p>下表は独身・扶養なし・40歳未満の場合の概算です。家族構成や年齢により変わります。</p>
+    <div style="overflow-x:auto;">
+      <table class="breakdown hayami-table">
+        <thead>
+          <tr>
+            <th>本業年収</th>
+            {SUB_INCOMES.map((s) => <th>副業{s / 10_000}万円</th>)}
+          </tr>
+        </thead>
+        <tbody>
+          {hayami.map((row) => (
+            <tr>
+              <td class="num">{row.main}万円</td>
+              {row.cols.map((c) => (
+                <td class="num">約{Math.round(c.additional / 10_000)}万円<br /><span style="font-size:0.8em;color:var(--muted)">実効{c.rate}%</span></td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+    <p style="font-size:0.85em; color:var(--muted);">※ 所得税（復興税込み）＋住民税の合計追加額の概算。実際の税額とは異なる場合があります。</p>
+  </section>
+
+  <RelatedTools tools={[
+    { href: '/tools/tedori/', name: '給与の手取り計算', desc: '額面年収から手取り（年・月）と税金内訳を概算' },
+    { href: '/tools/kabe/', name: '年収の壁シミュレーター', desc: '103/106/130/150/178万円の壁を判定' },
+    { href: '/tools/furusato/', name: 'ふるさと納税 限度額', desc: '年収・家族構成から自己負担2,000円の上限額を計算' },
+    { href: '/tools/taishoku/', name: '退職金の手取り計算', desc: '退職所得控除と税額を概算' },
+    { href: '/tools/kanzan/', name: '年収・月収・時給 換算', desc: '時給・日給・月給・年収を相互換算' },
+  ]} />
+</Base>
+
+<script>
+  import { calcFukugyo } from '../../lib/fukugyo.ts';
+  import { yen } from '../../lib/tax.ts';
+
+  const $ = (id: string) => document.getElementById(id) as HTMLElement;
+  const mainIncome = $('main-income') as HTMLInputElement;
+  const subIncome = $('sub-income') as HTMLInputElement;
+  const age = $('age') as HTMLSelectElement;
+  const dependents = $('dependents') as HTMLInputElement;
+  const spouse = $('spouse') as HTMLInputElement;
+
+  function render() {
+    const r = calcFukugyo({
+      mainIncome: Number(mainIncome.value) || 0,
+      subIncome: Number(subIncome.value) || 0,
+      age40OrOver: age.value === '1',
+      hasSpouse: spouse.checked,
+      dependents: Number(dependents.value) || 0,
+    });
+
+    $('r-total').textContent = yen(r.totalAdditionalTax);
+    $('r-rate').textContent = r.subIncome > 0 ? (r.effectiveTaxRate * 100).toFixed(1) + '%' : '—';
+
+    const banner = $('r-filing-banner');
+    if (r.subIncome === 0) {
+      banner.textContent = '';
+      banner.style.display = 'none';
+    } else if (r.needsFiling) {
+      banner.textContent = '📋 確定申告が必要です（副業所得が年20万円を超えています）';
+      banner.style.background = 'var(--accent-light, #fff3cd)';
+      banner.style.color = 'var(--accent-dark, #856404)';
+      banner.style.border = '1px solid var(--accent, #ffc107)';
+      banner.style.display = 'block';
+    } else {
+      banner.textContent = '✅ 所得税の確定申告は原則不要です（副業所得が年20万円以下）';
+      banner.style.background = '#d4edda';
+      banner.style.color = '#155724';
+      banner.style.border = '1px solid #c3e6cb';
+      banner.style.display = 'block';
+    }
+
+    $('r-sub').textContent = yen(r.subIncome);
+    $('r-base-it').textContent = yen(r.baseIncomeTax);
+    $('r-base-rt').textContent = yen(r.baseResidentTax);
+    $('r-combined-it').textContent = yen(r.combinedIncomeTax);
+    $('r-combined-rt').textContent = yen(r.combinedResidentTax);
+    $('r-add-it').textContent = yen(r.additionalIncomeTax);
+    $('r-add-rt').textContent = yen(r.additionalResidentTax);
+    $('r-add-total').textContent = yen(r.totalAdditionalTax);
+  }
+
+  for (const el of [mainIncome, subIncome, age, dependents, spouse]) {
+    el.addEventListener('input', render);
+    el.addEventListener('change', render);
+  }
+  render();
+</script>
