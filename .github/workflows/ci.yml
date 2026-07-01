@@ -48,7 +48,7 @@ jobs:
         run: node scripts/check-freshness.mjs || true
 
       - name: Slack通知（CI失敗時のみ）
-        if: failure() && secrets.SLACK_WEBHOOK_URL != ''
+        if: failure()
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
