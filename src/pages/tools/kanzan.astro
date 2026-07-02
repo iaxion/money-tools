@@ -2,11 +2,24 @@
 import Base from '../../layouts/Base.astro';
 import RelatedTools from '../../components/RelatedTools.astro';
 import { SITE } from '../../config.ts';
+import { fromHourly } from '../../lib/convert.ts';
 
 const path = '/tools/kanzan';
 const title = '時給→年収 換算ツール（日給・月収も）';
 const description =
-  '時給と労働時間から、日給・月収・年収をまとめて換算。「時給1,200円って年収いくら？」がすぐ分かる無料ツール。';
+  '時給と労働時間から、日給・月収・年収をまとめて換算。「時給1,200円って年収いくら？」がすぐ分かる無料ツール。時給別年収早見表つき。';
+
+/** 時給別年収早見表 — 1日8時間・月20日 と 月22日の2パターン */
+const HAYAMI_HOURLIES = [900, 1_000, 1_050, 1_100, 1_150, 1_200, 1_300, 1_500, 2_000, 2_500, 3_000];
+const hayami = HAYAMI_HOURLIES.map((hourly) => {
+  const r20 = fromHourly({ hourly, hoursPerDay: 8, daysPerMonth: 20 });
+  const r22 = fromHourly({ hourly, hoursPerDay: 8, daysPerMonth: 22 });
+  return { hourly, monthly20: r20.monthly, annual20: r20.annual, monthly22: r22.monthly, annual22: r22.annual };
+});
+
+function man(n: number): string {
+  return (n / 10_000).toLocaleString('ja-JP', { maximumFractionDigits: 1 }) + '万円';
+}
 
 const faqs = [
   {
@@ -83,6 +96,38 @@ const jsonLd = [
   </div>
 
   <section class="prose">
+    <h2>時給別 年収・月収早見表（2026年・額面）</h2>
+    <p>1日8時間・週5日勤務（月20日・月22日）の場合の年収・月収の目安（税引き前・額面）です。実際の手取りは<a href="/tools/tedori/">給与の手取り計算</a>でご確認ください。</p>
+    <div style="overflow-x:auto;">
+      <table class="breakdown hayami-table">
+        <thead>
+          <tr>
+            <th rowspan="2">時給</th>
+            <th colspan="2">月20日勤務</th>
+            <th colspan="2">月22日勤務</th>
+          </tr>
+          <tr>
+            <th>月収（額面）</th>
+            <th>年収（額面）</th>
+            <th>月収（額面）</th>
+            <th>年収（額面）</th>
+          </tr>
+        </thead>
+        <tbody>
+          {hayami.map((row) => (
+            <tr>
+              <td class="num">{row.hourly.toLocaleString('ja-JP')}円</td>
+              <td class="num">{man(row.monthly20)}</td>
+              <td class="num">{man(row.annual20)}</td>
+              <td class="num">{man(row.monthly22)}</td>
+              <td class="num">{man(row.annual22)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+    <p style="font-size:.85em; color:#6b7488;">※ 1日8時間・月20日（または月22日）勤務の場合の単純計算。残業・各種手当・社会保険料・税金は含みません。手取り金額は<a href="/tools/tedori/">給与の手取り計算</a>をご利用ください。</p>
+
     <h2>時給から年収を考えるときのポイント</h2>
     <ul>
       <li>年収は「時給 × 1日の労働時間 × 月の労働日数 × 12か月」で概算できます。</li>
